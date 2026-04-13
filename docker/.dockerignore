@@ -1,0 +1,83 @@
+# ============================================================
+# The Life Shield — .dockerignore
+# ============================================================
+
+# Python cache & bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Docker (don't recurse)
+docker/
+docker-compose*.yml
+
+# Docs
+docs/
+*.md
+README*
+
+# Tests
+tests/
+test_*
+*_test.py
+coverage.xml
+.coverage
+htmlcov/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Node (if frontend bundled separately)
+node_modules/
+npm-debug.log*
+
+# Secrets / credentials
+*.pem
+*.key
+*.crt
+*.pfx
+secrets/
+
+# Temp / misc
+tmp/
+temp/
+.tmp/
+*.bak
+*.orig

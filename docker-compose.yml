@@ -1,0 +1,151 @@
+version: "3.9"
+
+# =============================================================================
+# The Life Shield - Docker Compose
+# Development environment with PostgreSQL, Redis, and application
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database (Primary Data Store)
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: lifeshield_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lifeshield
+      POSTGRES_PASSWORD: lifeshield_dev_password
+      POSTGRES_DB: lifeshield_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lifeshield -d lifeshield_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - lifeshield_net
+
+  # ---------------------------------------------------------------------------
+  # Redis (Caching + Task Queue Broker)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: lifeshield_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass lifeshield_redis_dev
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "lifeshield_redis_dev", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lifeshield_net
+
+  # ---------------------------------------------------------------------------
+  # FastAPI Application
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: lifeshield_api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://lifeshield:lifeshield_dev_password@postgres:5432/lifeshield_db
+      REDIS_URL: redis://:lifeshield_redis_dev@redis:6379/0
+      CELERY_BROKER_URL: redis://:lifeshield_redis_dev@redis:6379/1
+    volumes:
+      - .:/app
+      - /app/__pycache__
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - lifeshield_net
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level info
+
+  # ---------------------------------------------------------------------------
+  # Celery Worker (Background Task Processing)
+  # ---------------------------------------------------------------------------
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: lifeshield_celery
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://lifeshield:lifeshield_dev_password@postgres:5432/lifeshield_db
+      REDIS_URL: redis://:lifeshield_redis_dev@redis:6379/0
+      CELERY_BROKER_URL: redis://:lifeshield_redis_dev@redis:6379/1
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - lifeshield_net
+    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=4
+
+  # ---------------------------------------------------------------------------
+  # PgAdmin (Database Administration UI - Dev only)
+  # ---------------------------------------------------------------------------
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: lifeshield_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@lifeshield.dev
+      PGADMIN_DEFAULT_PASSWORD: admin_dev_password
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - lifeshield_net
+    profiles:
+      - tools
+
+# ---------------------------------------------------------------------------
+# Named Volumes
+# ---------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+# ---------------------------------------------------------------------------
+# Networks
+# ---------------------------------------------------------------------------
+networks:
+  lifeshield_net:
+    driver: bridge
+    name: lifeshield_network

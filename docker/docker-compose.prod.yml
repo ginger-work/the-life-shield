@@ -1,0 +1,224 @@
+# ============================================================
+# The Life Shield — Production Docker Compose
+# Usage: make up-prod | docker compose -f docker/docker-compose.prod.yml up -d
+# ============================================================
+
+version: "3.9"
+
+volumes:
+  postgres_data:
+    name: lifeshield_postgres_data
+    external: true
+  redis_data:
+    name: lifeshield_redis_data
+    external: true
+  app_logs:
+    name: lifeshield_app_logs
+  media_files:
+    name: lifeshield_media_files
+    external: true
+  nginx_certs:
+    name: lifeshield_nginx_certs
+    external: true
+
+networks:
+  backend:
+    name: lifeshield_backend
+    driver: bridge
+    internal: true
+  frontend:
+    name: lifeshield_frontend
+    driver: bridge
+
+services:
+
+  # ---- PostgreSQL (Production) ----
+  db:
+    image: postgres:15-alpine
+    container_name: lifeshield_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    # No port exposed in production — internal only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+
+  # ---- Redis (Production) ----
+  redis:
+    image: redis:7-alpine
+    container_name: lifeshield_redis
+    restart: always
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # ---- FastAPI Application (Production) ----
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: production
+    image: lifeshield-api:${IMAGE_TAG:-latest}
+    container_name: lifeshield_api
+    restart: always
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD}@redis:6379/2
+      ENVIRONMENT: production
+      DEBUG: "false"
+    volumes:
+      - app_logs:/app/logs
+      - media_files:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+      - frontend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  # ---- Celery Worker (Production) ----
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: production
+    image: lifeshield-api:${IMAGE_TAG:-latest}
+    container_name: lifeshield_worker
+    restart: always
+    command: celery -A app.celery_app worker --loglevel=warning --concurrency=8 --prefetch-multiplier=1
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD}@redis:6379/2
+      ENVIRONMENT: production
+    volumes:
+      - app_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+
+  # ---- Celery Beat Scheduler (Production) ----
+  scheduler:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: production
+    image: lifeshield-api:${IMAGE_TAG:-latest}
+    container_name: lifeshield_scheduler
+    restart: always
+    command: celery -A app.celery_app beat --loglevel=warning
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/1
+      ENVIRONMENT: production
+    volumes:
+      - app_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+
+  # ---- Nginx (Production with SSL) ----
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: lifeshield_nginx
+    restart: always
+    volumes:
+      - ../nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/conf.d:/etc/nginx/conf.d:ro
+      - nginx_certs:/etc/nginx/certs:ro
+      - media_files:/var/www/media:ro
+      - app_logs:/var/log/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
