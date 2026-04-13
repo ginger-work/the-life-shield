@@ -207,7 +207,7 @@ class CommunicationLog(UUIDPrimaryKeyMixin, Base):
         Text,
         nullable=True,
     )
-    metadata: Mapped[Optional[Dict]] = mapped_column(
+    extra_data: Mapped[Optional[Dict]] = mapped_column(
         JSON,
         nullable=True,
     )

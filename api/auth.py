@@ -4,7 +4,7 @@ JWT + bcrypt + Role-Based Access Control
 """
 
 from fastapi import APIRouter, HTTPException, Depends, status
-from fastapi.security import HTTPBearer, HTTPAuthCredentials
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials as HTTPAuthCredentials
 from pydantic import BaseModel, EmailStr, validator
 from datetime import datetime, timedelta
 from typing import Optional

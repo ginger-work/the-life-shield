@@ -706,7 +706,7 @@ def get_audit_log(
                 "action": e.action.value,
                 "actor_type": e.actor_type,
                 "description": e.description,
-                "metadata": e.metadata,
+                "metadata": e.event_data,
                 "success": e.success,
                 "created_at": e.created_at.isoformat(),
             }

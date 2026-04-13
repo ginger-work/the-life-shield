@@ -142,7 +142,7 @@ class AuditTrail(Base):
         nullable=True,
         doc="Human-readable description of what happened",
     )
-    metadata: Mapped[Optional[dict]] = mapped_column(
+    event_data: Mapped[Optional[dict]] = mapped_column(
         JSON,
         nullable=True,
         doc="Structured details (no PII — IDs, statuses, codes only)",

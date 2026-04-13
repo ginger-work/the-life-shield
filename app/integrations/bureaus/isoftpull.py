@@ -294,13 +294,19 @@ class ISoftPullClient(BaseBureauClient):
 
     # ── iSoftPull doesn't support disputes ───────────────
 
-    def _file_dispute_request(self, request: DisputeFilingRequest) -> Tuple[str, Dict]:
+    def file_dispute(self, request: "DisputeFilingRequest", **kwargs) -> "DisputeFilingResult":  # type: ignore[override]
         raise NotImplementedError(
             "iSoftPull does not support dispute filing. "
             "Use EquifaxClient, ExperianClient, or TransUnionClient."
         )
 
-    def _parse_dispute_response(self, response_data: Dict) -> DisputeFilingResult:
+    def get_dispute_status(self, confirmation_number: str, **kwargs) -> "DisputeStatusResult":  # type: ignore[override]
+        raise NotImplementedError("iSoftPull does not support dispute status.")
+
+    def _file_dispute_request(self, request: "DisputeFilingRequest") -> Tuple[str, Dict]:
+        raise NotImplementedError("iSoftPull does not support dispute filing.")
+
+    def _parse_dispute_response(self, response_data: Dict) -> "DisputeFilingResult":
         raise NotImplementedError("iSoftPull does not support dispute filing.")
 
     def _get_dispute_status_request(self, confirmation_number: str) -> Tuple[str, Dict]:
@@ -308,5 +314,5 @@ class ISoftPullClient(BaseBureauClient):
 
     def _parse_dispute_status_response(
         self, response_data: Dict, confirmation_number: str
-    ) -> DisputeStatusResult:
+    ) -> "DisputeStatusResult":
         raise NotImplementedError("iSoftPull does not support dispute status.")

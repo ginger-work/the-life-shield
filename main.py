@@ -18,8 +18,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
-from api import auth_router, agents_router
-from app.api.v1 import credit_router, disputes_router
+from app.api.v1 import api_router
 from config.security import settings
 from database import init_db
 
@@ -193,10 +192,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
 
 API_V1 = settings.API_V1_PREFIX  # /api/v1
 
-app.include_router(auth_router, prefix=API_V1)
-app.include_router(agents_router, prefix=API_V1)
-app.include_router(credit_router, prefix=API_V1)
-app.include_router(disputes_router, prefix=API_V1)
+app.include_router(api_router, prefix=API_V1)
 
 
 # ─────────────────────────────────────────────

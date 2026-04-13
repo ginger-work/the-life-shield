@@ -4,8 +4,8 @@ API v1 Router — wires all sub-routers under /api/v1
 from fastapi import APIRouter
 
 from app.api.v1.auth.routes import router as auth_router
-from app.api.v1.credit.routes import router as credit_router
-from app.api.v1.disputes.routes import router as disputes_router
+from app.api.v1.credit import router as credit_router
+from app.api.v1.disputes import router as disputes_router
 from app.api.v1.clients.routes import router as clients_router
 from app.api.v1.agents.routes import router as agents_router
 from app.api.v1.communications.routes import router as communications_router

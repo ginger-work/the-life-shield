@@ -171,11 +171,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    audit_entries: Mapped[List["AuditTrail"]] = relationship(
-        "AuditTrail",
-        foreign_keys="AuditTrail.actor_id",
-        back_populates="actor_user",
-    )
+    # audit_entries relationship removed — use audit_service.get_client_audit_log() instead
 
     # --- Indexes ---
     __table_args__ = (

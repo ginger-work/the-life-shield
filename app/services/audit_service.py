@@ -32,7 +32,7 @@ def log_audit(
     subject_id: Optional[uuid.UUID] = None,
     client_id: Optional[uuid.UUID] = None,
     description: Optional[str] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: Optional[Dict[str, Any]] = None,  # mapped to event_data column
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
     correlation_id: Optional[str] = None,
@@ -76,7 +76,7 @@ def log_audit(
         client_id=client_id,
         action=action,
         description=description,
-        metadata=metadata or {},
+        event_data=metadata or {},  # renamed from metadata to avoid SQLAlchemy conflict
         ip_address=ip_address,
         user_agent=user_agent,
         correlation_id=correlation_id,
