@@ -1,5 +1,5 @@
 """
-Experian API Client - Pull reports, file disputes, monitor investigations
+TransUnion API Client - Pull reports, file disputes, monitor investigations
 """
 
 import requests
@@ -10,32 +10,32 @@ from .base import CreditBureauClient
 
 logger = logging.getLogger(__name__)
 
-class ExperianClient(CreditBureauClient):
-    """Experian API client implementation"""
+class TransUnionClient(CreditBureauClient):
+    """TransUnion API client implementation"""
     
-    def __init__(self, api_key: str, api_secret: str, api_url: str = "https://api.experian.com"):
+    def __init__(self, api_key: str, api_secret: str, api_url: str = "https://api.transunion.com"):
         super().__init__(api_key, api_secret, api_url)
         self.session_token = None
         self.authenticated = False
     
     def authenticate(self) -> bool:
-        """Authenticate with Experian API"""
+        """Authenticate with TransUnion API"""
         try:
             headers = {
-                "Authorization": f"Bearer {self.api_key}",
+                "X-API-Key": self.api_key,
                 "Content-Type": "application/json"
             }
             
             response = requests.post(
-                f"{self.api_url}/v2/auth/token",
+                f"{self.api_url}/authentication/v1/authenticate",
                 headers=headers,
-                json={"secret": self.api_secret},
+                json={"api_secret": self.api_secret},
                 timeout=10
             )
             
             if response.status_code == 200:
                 data = response.json()
-                self.session_token = data.get("access_token")
+                self.session_token = data.get("token")
                 self.authenticated = True
                 self.log_action("authenticate", {"success": True})
                 return True
@@ -47,20 +47,21 @@ class ExperianClient(CreditBureauClient):
             return bool(self.handle_error(e, "authenticate"))
     
     def get_consumer_report(self, ssn: str, dob: str, first_name: str, last_name: str, address: str) -> Dict:
-        """Pull consumer credit report from Experian"""
+        """Pull consumer credit report from TransUnion"""
         if not self.authenticated:
             self.authenticate()
         
         try:
             headers = {
+                "X-API-Key": self.api_key,
                 "Authorization": f"Bearer {self.session_token}",
                 "Content-Type": "application/json"
             }
             
             payload = {
-                "subject": {
+                "consumer": {
                     "ssn": ssn,
-                    "dob": dob,
+                    "date_of_birth": dob,
                     "first_name": first_name,
                     "last_name": last_name,
                     "address": address
@@ -68,7 +69,7 @@ class ExperianClient(CreditBureauClient):
             }
             
             response = requests.post(
-                f"{self.api_url}/v2/credit-file/report",
+                f"{self.api_url}/creditreporting/v1/consumers/creditreport",
                 headers=headers,
                 json=payload,
                 timeout=15
@@ -83,7 +84,7 @@ class ExperianClient(CreditBureauClient):
                 
                 return {
                     "success": True,
-                    "bureau": "experian",
+                    "bureau": "transunion",
                     "report_data": report_data,
                     "score": report_data.get("credit_score"),
                     "pulled_at": datetime.now().isoformat()
@@ -98,35 +99,36 @@ class ExperianClient(CreditBureauClient):
                 return {
                     "success": False,
                     "error": error_msg,
-                    "bureau": "experian"
+                    "bureau": "transunion"
                 }
         
         except Exception as e:
             return self.handle_error(e, "get_consumer_report")
     
     def file_dispute(self, ssn: str, item_id: str, dispute_reason: str, consumer_statement: str) -> Dict:
-        """File dispute with Experian"""
+        """File dispute with TransUnion"""
         if not self.authenticated:
             self.authenticate()
         
         try:
             headers = {
+                "X-API-Key": self.api_key,
                 "Authorization": f"Bearer {self.session_token}",
                 "Content-Type": "application/json"
             }
             
             payload = {
-                "subject": {"ssn": ssn},
-                "dispute": {
+                "consumer": {"ssn": ssn},
+                "dispute_request": {
                     "item_id": item_id,
-                    "reason": dispute_reason,
+                    "reason_code": dispute_reason,
                     "consumer_statement": consumer_statement,
                     "date_filed": datetime.now().isoformat()
                 }
             }
             
             response = requests.post(
-                f"{self.api_url}/v2/disputes/file",
+                f"{self.api_url}/disputes/v1/file",
                 headers=headers,
                 json=payload,
                 timeout=15
@@ -145,7 +147,7 @@ class ExperianClient(CreditBureauClient):
                 
                 return {
                     "success": True,
-                    "bureau": "experian",
+                    "bureau": "transunion",
                     "case_number": case_number,
                     "filed_at": datetime.now().isoformat(),
                     "investigation_deadline": (datetime.now() + timedelta(days=30)).isoformat()
@@ -160,7 +162,7 @@ class ExperianClient(CreditBureauClient):
                 return {
                     "success": False,
                     "error": error_msg,
-                    "bureau": "experian"
+                    "bureau": "transunion"
                 }
         
         except Exception as e:
@@ -173,12 +175,13 @@ class ExperianClient(CreditBureauClient):
         
         try:
             headers = {
+                "X-API-Key": self.api_key,
                 "Authorization": f"Bearer {self.session_token}",
                 "Content-Type": "application/json"
             }
             
             response = requests.get(
-                f"{self.api_url}/v2/disputes/{case_number}",
+                f"{self.api_url}/disputes/v1/{case_number}",
                 headers=headers,
                 params={"ssn": ssn},
                 timeout=10
@@ -195,7 +198,7 @@ class ExperianClient(CreditBureauClient):
                 
                 return {
                     "success": True,
-                    "bureau": "experian",
+                    "bureau": "transunion",
                     "case_number": case_number,
                     "status": status_data.get("status"),
                     "outcome": status_data.get("outcome"),
@@ -207,7 +210,7 @@ class ExperianClient(CreditBureauClient):
                 return {
                     "success": False,
                     "error": error_msg,
-                    "bureau": "experian"
+                    "bureau": "transunion"
                 }
         
         except Exception as e:
@@ -220,12 +223,13 @@ class ExperianClient(CreditBureauClient):
         
         try:
             headers = {
+                "X-API-Key": self.api_key,
                 "Authorization": f"Bearer {self.session_token}",
                 "Content-Type": "application/json"
             }
             
             response = requests.get(
-                f"{self.api_url}/v2/credit-file/changes",
+                f"{self.api_url}/creditreporting/v1/consumers/filechanges",
                 headers=headers,
                 params={
                     "ssn": ssn,
