@@ -197,11 +197,7 @@ def _decode_token(token: str, expected_type: Optional[str] = None) -> dict:
 
 def _is_async_session(db) -> bool:
     """Detect if session is async."""
-    try:
-        from sqlalchemy.ext.asyncio import AsyncSession
-        return isinstance(db, AsyncSession)
-    except Exception:
-        return False
+    return type(db).__name__ == "AsyncSession"
 
 
 def _get_user_model():

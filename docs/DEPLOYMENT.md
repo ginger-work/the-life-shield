@@ -1,240 +1,299 @@
-# The Life Shield — Production Deployment Guide
+# The Life Shield — Deployment Guide
 
-> Platform: AWS EC2 (Ubuntu 22.04 LTS recommended) + Docker Compose
+## Quick Start (Development)
+
+```bash
+# 1. Clone and setup
+git clone <repo>
+cd the-life-shield
+cp .env.example .env
+
+# 2. Fill in .env with local values
+# DATABASE_URL=postgresql://lifeshield:password@localhost:5432/lifeshield_db
+# TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
+# SENDGRID_API_KEY
+# etc.
+
+# 3. Start everything with Docker Compose
+docker-compose up -d
+
+# 4. Run migrations (auto on startup, but can be manual)
+docker-compose exec api alembic upgrade head
+
+# 5. Seed sample data (optional)
+docker-compose exec api python scripts/seed_database.py
+
+# 6. Open browser
+# API: http://localhost:8000/api/docs
+# Portal: http://localhost:3000
+```
 
 ---
 
-## Prerequisites on Production Server
+## Production Deployment
+
+### System Requirements
+
+- **Server:** Linux (Ubuntu 20.04+) or macOS
+- **CPU:** 2+ cores minimum (4+ recommended)
+- **RAM:** 4GB minimum (8GB+ recommended)
+- **Disk:** 20GB minimum
+- **Network:** Public IP with DNS configured
+
+### Prerequisites
+
+- Docker & Docker Compose 2.0+
+- PostgreSQL 14+ (managed database recommended)
+- Redis 7+ (optional but recommended for scaling)
+- SSL certificate (Let's Encrypt via Certbot)
+- Domain name (for DNS)
+
+### Step 1: Prepare Server
 
 ```bash
+# SSH into server
+ssh ubuntu@your-server-ip
+
 # Update system
 sudo apt update && sudo apt upgrade -y
 
-# Install Docker
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-newgrp docker
-
-# Install Docker Compose plugin
-sudo apt install docker-compose-plugin -y
-
-# Install Make
-sudo apt install make -y
+# Install Docker & Docker Compose
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker ubuntu
 
 # Verify
 docker --version
-docker compose version
+docker-compose --version
 ```
 
----
-
-## First-Time Setup
-
-### 1. Clone the repo
+### Step 2: Clone Repository
 
 ```bash
 cd /opt
-sudo mkdir lifeshield && sudo chown $USER:$USER lifeshield
+sudo git clone <repo> lifeshield
+sudo chown -R ubuntu:ubuntu lifeshield
 cd lifeshield
-git clone https://github.com/your-org/the-life-shield.git .
 ```
 
-### 2. Create `.env` with production values
+### Step 3: Configure Environment
 
 ```bash
 cp .env.example .env
-nano .env
+nano .env   # Edit all required values
+
+# Critical for production:
+APP_ENV=production
+APP_SECRET_KEY=<generate: python -c "import secrets; print(secrets.token_hex(16))">
+DATABASE_URL=postgresql://<user>:<pass>@<postgres-host>:5432/lifeshield_prod
+TWILIO_ACCOUNT_SID=<your-sid>
+TWILIO_AUTH_TOKEN=<your-token>
+SENDGRID_API_KEY=<your-key>
+TRGPAY_PUBLIC_KEY=<your-key>
+TRGPAY_SECRET_KEY=<your-secret>
 ```
 
-Critical values to update:
-- `ENVIRONMENT=production`
-- `DEBUG=false`
-- `SECRET_KEY=` (generate: `openssl rand -hex 50`)
-- `JWT_SECRET_KEY=` (generate: `openssl rand -hex 50`)
-- All API keys (Stripe, Twilio, SendGrid, OpenAI, etc.)
-- `POSTGRES_PASSWORD=` (strong password)
-- `REDIS_PASSWORD=` (strong password)
-- `DATABASE_URL=` (update with above password)
-- `REDIS_URL=` (update with above password)
-
-### 3. Create production volumes
+### Step 4: Setup SSL
 
 ```bash
-bash scripts/create-prod-volumes.sh
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx -y
+
+# Generate certificate
+sudo certbot certonly --standalone -d api.thelifeshield.com -d portal.thelifeshield.com
+
+# Auto-renew
+sudo systemctl enable certbot.timer
 ```
 
-### 4. Set up SSL certificates
-
-Using Let's Encrypt (Certbot):
+### Step 5: Configure Nginx
 
 ```bash
-sudo apt install certbot -y
+# Create /etc/nginx/sites-available/lifeshield
+sudo tee /etc/nginx/sites-available/lifeshield > /dev/null <<EOF
+upstream api {
+    server localhost:8000;
+}
+upstream portal {
+    server localhost:3000;
+}
 
-# Obtain cert (point DNS to server first)
-sudo certbot certonly --standalone -d thelifeshield.com -d www.thelifeshield.com
+server {
+    listen 80;
+    server_name api.thelifeshield.com portal.thelifeshield.com;
+    return 301 https://\$server_name\$request_uri;
+}
 
-# Copy to Docker volume
-docker run --rm -v lifeshield_nginx_certs:/certs ubuntu bash -c "
-  cp /etc/letsencrypt/live/thelifeshield.com/fullchain.pem /certs/ &&
-  cp /etc/letsencrypt/live/thelifeshield.com/privkey.pem /certs/ &&
-  chmod 600 /certs/*.pem
-"
+server {
+    listen 443 ssl http2;
+    server_name api.thelifeshield.com;
+    
+    ssl_certificate /etc/letsencrypt/live/api.thelifeshield.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.thelifeshield.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    
+    client_max_body_size 10M;
+    
+    location / {
+        proxy_pass http://api;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name portal.thelifeshield.com;
+    
+    ssl_certificate /etc/letsencrypt/live/portal.thelifeshield.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/portal.thelifeshield.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    
+    location / {
+        proxy_pass http://portal;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+    }
+}
+EOF
+
+sudo ln -s /etc/nginx/sites-available/lifeshield /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
 ```
 
-### 5. Build and launch
+### Step 6: Build & Start Services
 
 ```bash
-make build-prod
-make up-prod
+cd /opt/lifeshield
+
+# Build Docker images (API)
+docker-compose -f docker-compose.prod.yml build
+
+# Start all services
+docker-compose -f docker-compose.prod.yml up -d
+
+# Wait for DB
+docker-compose -f docker-compose.prod.yml logs api | grep "uvicorn"
 
 # Run migrations
-make migrate-prod
+docker-compose -f docker-compose.prod.yml run --rm api alembic upgrade head
 
-# Verify all containers running
-docker compose -f docker/docker-compose.prod.yml ps
+# Build portal (Next.js)
+cd portal
+npm install --production
+npm run build
+npm run start &   # Run in background or use PM2
+
+# Verify
+curl https://api.thelifeshield.com/health
+curl https://portal.thelifeshield.com
 ```
 
----
-
-## Deploying Updates
+### Step 7: Monitoring & Maintenance
 
 ```bash
-# Pull latest code
+# View logs
+docker-compose logs -f api
+docker-compose logs -f db
+docker-compose logs -f redis
+
+# Database backup
+docker-compose exec db pg_dump -U lifeshield lifeshield_prod > backup_$(date +%Y%m%d).sql
+
+# Update application
+cd /opt/lifeshield
 git pull origin main
-
-# Build new image
-make build-prod
-
-# Restart services (zero-downtime rolling restart)
-make up-prod
-
-# Run any new migrations
-make migrate-prod
-
-# Clean old images
-docker image prune -f
+docker-compose -f docker-compose.prod.yml up -d --build
+docker-compose -f docker-compose.prod.yml run --rm api alembic upgrade head
 ```
 
 ---
 
-## Automated Deployment (GitHub Actions)
-
-The CI/CD pipeline (`.github/workflows/ci.yml`) handles automated deploys on push to `main`.
-
-### Required GitHub Secrets
-
-Set these in: **Settings → Secrets → Actions**
-
-| Secret | Value |
-|--------|-------|
-| `PROD_HOST` | Your server IP or domain |
-| `PROD_USER` | SSH username (e.g., `ubuntu`) |
-| `PROD_SSH_KEY` | Private SSH key (the key allowed on server) |
-
-Workflow on every `main` push:
-1. Lint → Test → Build Docker image
-2. Push image to GitHub Container Registry
-3. SSH into server → pull image → restart containers
-
----
-
-## Monitoring
-
-### View logs
+## Health Checks
 
 ```bash
-make logs-prod
-# Or specific service:
-docker compose -f docker/docker-compose.prod.yml logs -f api
-```
+# API health
+curl https://api.thelifeshield.com/health
 
-### Container health
+# Database connectivity
+curl https://api.thelifeshield.com/api/v1/auth/me -H "Authorization: Bearer <token>"
 
-```bash
-docker compose -f docker/docker-compose.prod.yml ps
-```
-
-### Sentry (Error Tracking)
-
-Set `SENTRY_DSN` in `.env` and errors will be reported automatically.
-
-### Resource usage
-
-```bash
-docker stats
+# Portal
+curl https://portal.thelifeshield.com
 ```
 
 ---
 
-## SSL Certificate Renewal
+## Scaling (Production)
 
-Certbot auto-renewal should be configured:
-
-```bash
-# Test renewal
-sudo certbot renew --dry-run
-
-# Cron job (add to crontab)
-0 3 * * * certbot renew --quiet && docker exec lifeshield_nginx nginx -s reload
+### Horizontal Scaling
+```yaml
+# docker-compose.prod.yml
+api:
+  deploy:
+    replicas: 3      # Run 3 instances
+    
+celery:
+  deploy:
+    replicas: 2      # Run 2 workers
 ```
+
+### Database Pooling
+```python
+# app/core/database.py
+DATABASE_POOL_SIZE=20      # Increase from 10
+DATABASE_MAX_OVERFLOW=40   # Increase from 20
+```
+
+### Redis Caching
+Enable Redis for session caching and rate limit tracking (already configured).
+
+---
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Port 8000 already in use | `sudo lsof -i :8000` and kill process |
+| Database connection refused | Verify DATABASE_URL, check PostgreSQL running |
+| API returns 500 errors | `docker-compose logs api` to debug |
+| Portal shows 404s | Verify NEXT_PUBLIC_API_URL in portal |
+| Twilio SMS not working | Check TWILIO_* credentials and account status |
+| SSL certificate error | Verify certbot renewal: `sudo certbot renew --dry-run` |
 
 ---
 
 ## Backup Strategy
 
-### Database backup
-
 ```bash
-make db-backup
-# Saves: backup-YYYYMMDD-HHMMSS.sql
-```
+# Daily automated backup
+0 2 * * * /opt/lifeshield/scripts/backup.sh
 
-Automate with cron:
-
-```bash
-0 2 * * * cd /opt/lifeshield && make db-backup && \
-  aws s3 cp backup-*.sql s3://lifeshield-backups/db/ && \
-  find . -name "backup-*.sql" -mtime +7 -delete
-```
-
-### Redis backup
-
-Redis is configured with `appendonly yes` — data persists in the `lifeshield_redis_data` volume automatically.
-
----
-
-## Security Hardening Checklist
-
-- [ ] `.env` has `DEBUG=false`
-- [ ] All passwords are strong and unique
-- [ ] `SECRET_KEY` is 50+ random chars
-- [ ] PostgreSQL not exposed externally (no port in prod compose)
-- [ ] Nginx configured with SSL and security headers
-- [ ] UFW firewall: only 22, 80, 443 open
-- [ ] SSH key-only authentication (no password SSH)
-- [ ] Regular backups tested and working
-- [ ] Sentry configured for error alerting
-- [ ] Let's Encrypt auto-renewal tested
-
-```bash
-# Quick firewall setup
-sudo ufw allow 22/tcp
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw enable
+# Script: /opt/lifeshield/scripts/backup.sh
+#!/bin/bash
+BACKUP_DIR="/backups/lifeshield"
+mkdir -p $BACKUP_DIR
+docker-compose exec -T db pg_dump -U lifeshield lifeshield_prod | gzip > $BACKUP_DIR/backup_$(date +\%Y\%m\%d_\%H\%M\%S).sql.gz
+find $BACKUP_DIR -type f -mtime +30 -delete  # Delete backups older than 30 days
 ```
 
 ---
 
-## Rollback
+## Go-Live Checklist
 
-```bash
-# Find previous image tag
-docker images | grep lifeshield
-
-# Roll back to specific tag
-IMAGE_TAG=main-abc123 make up-prod
-
-# Or quickly restart current prod
-make down-prod && make up-prod
-```
+- [ ] Environment variables configured (all keys present)
+- [ ] SSL certificates installed and renewable
+- [ ] Database migrated and tested
+- [ ] Twilio/SendGrid/TRGpay credentials verified
+- [ ] Backups scheduled and tested
+- [ ] Monitoring alerts configured (email on 500 errors)
+- [ ] Domain DNS pointing to server
+- [ ] API and Portal endpoints responding with 200/301
+- [ ] Tim Shaw AI agent responding in chat
+- [ ] Admin dashboard accessible
+- [ ] Payment processing (TRGpay) tested
+- [ ] Load testing completed (k6 or similar)
