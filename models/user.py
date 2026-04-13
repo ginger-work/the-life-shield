@@ -11,9 +11,46 @@ from sqlalchemy import (
     Boolean, Column, DateTime, Enum, ForeignKey,
     Integer, String, Text, UniqueConstraint
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
+
+# Cross-DB UUID column type (PostgreSQL uses native UUID; SQLite uses String)
+try:
+    from sqlalchemy.dialects.postgresql import UUID as _PG_UUID
+    _UUID_TYPE = _PG_UUID(as_uuid=True)
+except Exception:
+    _UUID_TYPE = String(36)
+
+from sqlalchemy.types import TypeDecorator, CHAR
+import uuid as _uuid_lib
+
+class UUID(TypeDecorator):
+    """Platform-independent UUID type (works with SQLite and PostgreSQL)."""
+    impl = CHAR
+    cache_ok = True
+    
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+            return dialect.type_descriptor(PG_UUID(as_uuid=True))
+        return dialect.type_descriptor(CHAR(36))
+    
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        if dialect.name == 'postgresql':
+            return str(value) if not isinstance(value, _uuid_lib.UUID) else value
+        return str(value)
+    
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        if not isinstance(value, _uuid_lib.UUID):
+            try:
+                return _uuid_lib.UUID(str(value))
+            except (ValueError, AttributeError):
+                return value
+        return value
 
 from .base import Base
 from config.security import UserRole
@@ -31,7 +68,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        UUID(), primary_key=True, default=uuid.uuid4
     )
     email: Mapped[str] = mapped_column(
         String(255), unique=True, nullable=False, index=True
@@ -108,10 +145,10 @@ class UserSession(Base):
     __tablename__ = "user_sessions"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        UUID(), primary_key=True, default=uuid.uuid4
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
     # Token identity (store the JTI — JWT ID — not the raw token)
@@ -157,11 +194,11 @@ class AuditLog(Base):
     __tablename__ = "audit_trail"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        UUID(), primary_key=True, default=uuid.uuid4
     )
     # Who performed it (nullable for system actions)
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"),
+        UUID(), ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True, index=True
     )
 

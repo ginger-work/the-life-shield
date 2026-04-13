@@ -165,12 +165,13 @@ def create_refresh_token(subject: str) -> str:
     )
 
 
-def decode_token(token: str) -> dict[str, Any]:
+def decode_token(token: str, expected_type: Optional[str] = None) -> dict[str, Any]:
     """
     Decode and validate a JWT token.
 
     Args:
         token: JWT string to decode
+        expected_type: Optional token type to validate (access, refresh, email_verify, password_reset)
 
     Returns:
         Decoded payload dictionary
@@ -184,6 +185,8 @@ def decode_token(token: str) -> dict[str, Any]:
             settings.JWT_SECRET_KEY,
             algorithms=[settings.JWT_ALGORITHM],
         )
+        if expected_type and payload.get("type") != expected_type:
+            raise ValueError(f"Invalid token type: expected {expected_type}, got {payload.get('type')}")
         return payload
     except JWTError as e:
         logger.warning("JWT decode failed", error=str(e))
@@ -215,3 +218,29 @@ def generate_secure_token(length: int = 32) -> str:
 def generate_otp(digits: int = 6) -> str:
     """Generate a numeric OTP code (e.g., for email verification)."""
     return str(secrets.randbelow(10 ** digits)).zfill(digits)
+
+
+def create_email_verify_token(user_id: str) -> str:
+    """Create short-lived email verification token."""
+    expire = datetime.now(timezone.utc) + timedelta(hours=24)
+    payload = {
+        "sub": str(user_id),
+        "exp": expire,
+        "iat": datetime.now(timezone.utc),
+        "type": "email_verify",
+        "jti": secrets.token_urlsafe(16),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def create_password_reset_token(email: str) -> str:
+    """Create short-lived password reset token."""
+    expire = datetime.now(timezone.utc) + timedelta(hours=1)
+    payload = {
+        "sub": email,
+        "exp": expire,
+        "iat": datetime.now(timezone.utc),
+        "type": "password_reset",
+        "jti": secrets.token_urlsafe(16),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)

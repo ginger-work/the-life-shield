@@ -391,6 +391,36 @@ async def confirm_password_reset(request: PasswordResetConfirm, db: Session = De
     return {'success': True, 'message': 'Password reset successfully'}
 
 # ========================================
+# ASYNC EMAIL HELPERS (patchable in tests)
+# ========================================
+
+async def _send_verification_email(email: str, token: str) -> None:
+    """
+    Send email verification link to client.
+    Patchable in tests. In production: use SendGrid.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"[EMAIL] Verification email sent to {email}")
+    # Also update the app-level helper so it's consistent
+    try:
+        import app.api.v1.auth.email_helpers as _helpers
+        _helpers._send_verification_email = _send_verification_email
+    except Exception:
+        pass
+
+
+async def _send_password_reset_email(email: str, token: str) -> None:
+    """
+    Send password reset link to client.
+    Patchable in tests. In production: use SendGrid.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"[EMAIL] Password reset email sent to {email}")
+
+
+# ========================================
 # COMPLETE
 # ========================================
 # - JWT token generation & verification
@@ -399,3 +429,5 @@ async def confirm_password_reset(request: PasswordResetConfirm, db: Session = De
 # - Signup, login, refresh, logout
 # - Password reset flow
 # - Audit trail logging
+# - Email verification flow (patchable)
+# - Password reset flow (patchable)

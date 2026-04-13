@@ -20,7 +20,11 @@ from slowapi.util import get_remote_address
 
 from app.api.v1 import api_router
 from config.security import settings
-from database import init_db
+from app.core.database import engine, Base
+
+def init_db():
+    """Create all tables (sync version for startup)."""
+    Base.metadata.create_all(bind=engine)
 
 # ─────────────────────────────────────────────
 # STRUCTURED LOGGING SETUP
@@ -67,7 +71,7 @@ async def lifespan(app: FastAPI):
     """Startup + shutdown events."""
     log.info("Starting The Life Shield API", version="1.0.0", env="debug" if settings.DEBUG else "production")
     if settings.DEBUG:
-        await init_db()  # Only auto-create tables in dev; use Alembic in prod
+        init_db()  # Create tables on startup (use Alembic in production)
     yield
     log.info("Shutting down The Life Shield API")
 

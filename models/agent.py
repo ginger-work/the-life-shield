@@ -11,7 +11,7 @@ from sqlalchemy import (
     Boolean, Column, DateTime, Enum as SAEnum, Float,
     ForeignKey, Integer, String, Text, JSON
 )
-from sqlalchemy.dialects.postgresql import UUID
+from models.user import UUID  # Cross-DB UUID type (works with SQLite + PostgreSQL)
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -31,12 +31,12 @@ class AgentProfile(Base):
     __tablename__ = "agent_profiles"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        UUID(), primary_key=True, default=uuid.uuid4
     )
 
     # Identity (links to users table — agents have user accounts)
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"),
+        UUID(), ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True, index=True
     )
 
@@ -138,14 +138,14 @@ class ClientAgentAssignment(Base):
     __tablename__ = "client_agent_assignments"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        UUID(), primary_key=True, default=uuid.uuid4
     )
     client_user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
+        UUID(), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     agent_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("agent_profiles.id", ondelete="CASCADE"),
+        UUID(), ForeignKey("agent_profiles.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
 
@@ -155,7 +155,7 @@ class ClientAgentAssignment(Base):
     )
     reassigned_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     assigned_by_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        UUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 

@@ -74,15 +74,7 @@ class Base(DeclarativeBase):
 # ---------------------------------------------------------------------------
 
 def get_db() -> Generator[Session, None, None]:
-    """
-    FastAPI dependency that provides a database session.
-    Automatically closes the session when the request is done.
-
-    Usage in route:
-        @router.get("/items")
-        def get_items(db: Session = Depends(get_db)):
-            ...
-    """
+    """FastAPI dependency that provides a database session."""
     db = SessionLocal()
     try:
         yield db
