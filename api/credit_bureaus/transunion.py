@@ -1,257 +1,379 @@
 """
-TransUnion API Client - Pull reports, file disputes, monitor investigations
+TransUnion API Client — The Life Shield
+
+Authentication:  HMAC-signed API Key + Secret → Bearer token exchange
+API type:        REST / JSON
+Compliance:      FCRA
+
+Environment variables:
+    TRANSUNION_API_KEY       API key from TransUnion
+    TRANSUNION_API_SECRET    API secret (HMAC signing)
+    TRANSUNION_BASE_URL      (optional) override
+    TRANSUNION_TOKEN_URL     (optional) override
+    TRANSUNION_SANDBOX       "true" for sandbox
+
+Usage::
+
+    from api.credit_bureaus.transunion import TransUnionClient
+    client = TransUnionClient.from_env()
+    report = client.pull_credit_report("ls-client-001", consumer={...})
 """
 
-import requests
-from typing import Optional, Dict, List
-from datetime import datetime, timedelta
+from __future__ import annotations
+
+import hashlib
+import hmac
 import logging
-from .base import CreditBureauClient
+import os
+import time
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Optional
+
+import requests
+
+from .base import (
+    AuthenticationError,
+    BaseBureauClient,
+    CreditBureauError,
+    DisputeError,
+    ReportPullError,
+    ValidationError,
+)
 
 logger = logging.getLogger(__name__)
 
-class TransUnionClient(CreditBureauClient):
-    """TransUnion API client implementation"""
-    
-    def __init__(self, api_key: str, api_secret: str, api_url: str = "https://api.transunion.com"):
-        super().__init__(api_key, api_secret, api_url)
-        self.session_token = None
-        self.authenticated = False
-    
-    def authenticate(self) -> bool:
-        """Authenticate with TransUnion API"""
+_PROD_BASE_URL = "https://api.transunion.com/credit-reports/v1"
+_SANDBOX_BASE_URL = "https://apitest.transunion.com/credit-reports/v1"
+_PROD_TOKEN_URL = "https://api.transunion.com/auth/v1/token"
+_SANDBOX_TOKEN_URL = "https://apitest.transunion.com/auth/v1/token"
+
+
+class TransUnionClient(BaseBureauClient):
+    """
+    Production-ready TransUnion API client.
+
+    Uses HMAC-SHA256 signed credentials exchanged for a short-lived Bearer token.
+
+    Supports:
+    - Pull consumer credit reports (VantageScore + tradelines)
+    - File FCRA disputes
+    - Monitor dispute investigation status
+    - Poll credit file change monitoring
+    """
+
+    BUREAU_NAME = "transunion"
+
+    def __init__(self, config: Dict[str, Any]) -> None:
+        super().__init__(config)
+        self._api_key: str = config["api_key"]
+        self._api_secret: str = config["api_secret"]
+        self._token_url: str = config.get("token_url", _PROD_TOKEN_URL)
+
+    @classmethod
+    def from_env(cls) -> "TransUnionClient":
+        """Construct client from environment variables."""
+        sandbox = os.getenv("TRANSUNION_SANDBOX", "false").lower() == "true"
+        return cls({
+            "api_key": os.environ["TRANSUNION_API_KEY"],
+            "api_secret": os.environ["TRANSUNION_API_SECRET"],
+            "base_url": os.getenv(
+                "TRANSUNION_BASE_URL",
+                _SANDBOX_BASE_URL if sandbox else _PROD_BASE_URL,
+            ),
+            "token_url": os.getenv(
+                "TRANSUNION_TOKEN_URL",
+                _SANDBOX_TOKEN_URL if sandbox else _PROD_TOKEN_URL,
+            ),
+            "sandbox": sandbox,
+            "timeout": int(os.getenv("TRANSUNION_TIMEOUT", "30")),
+            "max_retries": int(os.getenv("TRANSUNION_MAX_RETRIES", "3")),
+        })
+
+    # ------------------------------------------------------------------
+    # Authentication
+    # ------------------------------------------------------------------
+
+    def _sign_request(self, timestamp: str) -> str:
+        """HMAC-SHA256 sign: api_key + ":" + timestamp."""
+        message = f"{self._api_key}:{timestamp}"
+        return hmac.new(
+            self._api_secret.encode("utf-8"),
+            message.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+
+    def _authenticate(self) -> str:
+        """Exchange HMAC-signed credentials for a short-lived Bearer token."""
+        logger.debug("TransUnion: exchanging credentials for bearer token")
+        timestamp = str(int(time.time()))
+        signature = self._sign_request(timestamp)
+
         try:
-            headers = {
-                "X-API-Key": self.api_key,
-                "Content-Type": "application/json"
-            }
-            
-            response = requests.post(
-                f"{self.api_url}/authentication/v1/authenticate",
-                headers=headers,
-                json={"api_secret": self.api_secret},
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                self.session_token = data.get("token")
-                self.authenticated = True
-                self.log_action("authenticate", {"success": True})
-                return True
-            else:
-                self.log_action("authenticate", {"success": False, "status": response.status_code})
-                return False
-        
-        except Exception as e:
-            return bool(self.handle_error(e, "authenticate"))
-    
-    def get_consumer_report(self, ssn: str, dob: str, first_name: str, last_name: str, address: str) -> Dict:
-        """Pull consumer credit report from TransUnion"""
-        if not self.authenticated:
-            self.authenticate()
-        
-        try:
-            headers = {
-                "X-API-Key": self.api_key,
-                "Authorization": f"Bearer {self.session_token}",
-                "Content-Type": "application/json"
-            }
-            
-            payload = {
-                "consumer": {
-                    "ssn": ssn,
-                    "date_of_birth": dob,
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "address": address
-                }
-            }
-            
-            response = requests.post(
-                f"{self.api_url}/creditreporting/v1/consumers/creditreport",
-                headers=headers,
-                json=payload,
-                timeout=15
-            )
-            
-            if response.status_code == 200:
-                report_data = response.json()
-                self.log_action("get_consumer_report", {
-                    "ssn": ssn[-4:],
-                    "success": True
-                })
-                
-                return {
-                    "success": True,
-                    "bureau": "transunion",
-                    "report_data": report_data,
-                    "score": report_data.get("credit_score"),
-                    "pulled_at": datetime.now().isoformat()
-                }
-            else:
-                error_msg = response.json().get("error", response.text)
-                self.log_action("get_consumer_report", {
-                    "success": False,
-                    "status": response.status_code
-                })
-                
-                return {
-                    "success": False,
-                    "error": error_msg,
-                    "bureau": "transunion"
-                }
-        
-        except Exception as e:
-            return self.handle_error(e, "get_consumer_report")
-    
-    def file_dispute(self, ssn: str, item_id: str, dispute_reason: str, consumer_statement: str) -> Dict:
-        """File dispute with TransUnion"""
-        if not self.authenticated:
-            self.authenticate()
-        
-        try:
-            headers = {
-                "X-API-Key": self.api_key,
-                "Authorization": f"Bearer {self.session_token}",
-                "Content-Type": "application/json"
-            }
-            
-            payload = {
-                "consumer": {"ssn": ssn},
-                "dispute_request": {
-                    "item_id": item_id,
-                    "reason_code": dispute_reason,
-                    "consumer_statement": consumer_statement,
-                    "date_filed": datetime.now().isoformat()
-                }
-            }
-            
-            response = requests.post(
-                f"{self.api_url}/disputes/v1/file",
-                headers=headers,
-                json=payload,
-                timeout=15
-            )
-            
-            if response.status_code in [200, 201]:
-                dispute_data = response.json()
-                case_number = dispute_data.get("case_number")
-                
-                self.log_action("file_dispute", {
-                    "ssn": ssn[-4:],
-                    "item_id": item_id,
-                    "case_number": case_number,
-                    "success": True
-                })
-                
-                return {
-                    "success": True,
-                    "bureau": "transunion",
-                    "case_number": case_number,
-                    "filed_at": datetime.now().isoformat(),
-                    "investigation_deadline": (datetime.now() + timedelta(days=30)).isoformat()
-                }
-            else:
-                error_msg = response.json().get("error", response.text)
-                self.log_action("file_dispute", {
-                    "success": False,
-                    "status": response.status_code
-                })
-                
-                return {
-                    "success": False,
-                    "error": error_msg,
-                    "bureau": "transunion"
-                }
-        
-        except Exception as e:
-            return self.handle_error(e, "file_dispute")
-    
-    def get_dispute_status(self, case_number: str, ssn: str) -> Dict:
-        """Check dispute investigation status"""
-        if not self.authenticated:
-            self.authenticate()
-        
-        try:
-            headers = {
-                "X-API-Key": self.api_key,
-                "Authorization": f"Bearer {self.session_token}",
-                "Content-Type": "application/json"
-            }
-            
-            response = requests.get(
-                f"{self.api_url}/disputes/v1/{case_number}",
-                headers=headers,
-                params={"ssn": ssn},
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                status_data = response.json()
-                
-                self.log_action("get_dispute_status", {
-                    "case_number": case_number,
-                    "status": status_data.get("status"),
-                    "success": True
-                })
-                
-                return {
-                    "success": True,
-                    "bureau": "transunion",
-                    "case_number": case_number,
-                    "status": status_data.get("status"),
-                    "outcome": status_data.get("outcome"),
-                    "last_update": status_data.get("last_update"),
-                    "expected_resolution": status_data.get("expected_resolution_date")
-                }
-            else:
-                error_msg = response.json().get("error", response.text)
-                return {
-                    "success": False,
-                    "error": error_msg,
-                    "bureau": "transunion"
-                }
-        
-        except Exception as e:
-            return self.handle_error(e, "get_dispute_status")
-    
-    def get_file_changes(self, ssn: str, last_check_date: datetime) -> List[Dict]:
-        """Get changes to consumer file since last check"""
-        if not self.authenticated:
-            self.authenticate()
-        
-        try:
-            headers = {
-                "X-API-Key": self.api_key,
-                "Authorization": f"Bearer {self.session_token}",
-                "Content-Type": "application/json"
-            }
-            
-            response = requests.get(
-                f"{self.api_url}/creditreporting/v1/consumers/filechanges",
-                headers=headers,
-                params={
-                    "ssn": ssn,
-                    "since": last_check_date.isoformat()
+            resp = requests.post(
+                self._token_url,
+                json={
+                    "apiKey": self._api_key,
+                    "timestamp": timestamp,
+                    "signature": signature,
                 },
-                timeout=10
+                timeout=self.timeout,
             )
-            
-            if response.status_code == 200:
-                changes = response.json().get("changes", [])
-                self.log_action("get_file_changes", {
-                    "ssn": ssn[-4:],
-                    "changes_count": len(changes)
-                })
-                return changes
-            else:
-                self.log_action("get_file_changes", {
-                    "success": False,
-                    "status": response.status_code
-                })
-                return []
-        
-        except Exception as e:
-            self.handle_error(e, "get_file_changes")
-            return []
+        except requests.exceptions.RequestException as exc:
+            raise AuthenticationError(
+                f"TransUnion token request network error: {exc}"
+            ) from exc
+
+        if resp.status_code != 200:
+            raise AuthenticationError(
+                f"TransUnion token request failed [{resp.status_code}]: {resp.text}"
+            )
+
+        data = resp.json()
+        token = data.get("accessToken") or data.get("access_token")
+        if not token:
+            raise AuthenticationError("TransUnion token response missing accessToken")
+
+        expires_in = int(data.get("expiresIn", data.get("expires_in", 3600)))
+        self._token_expiry = time.time() + expires_in
+        logger.debug("TransUnion: token acquired, expires_in=%ds", expires_in)
+        return token
+
+    # ------------------------------------------------------------------
+    # Pull credit report
+    # ------------------------------------------------------------------
+
+    def pull_credit_report(
+        self, client_id: str, consumer: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Pull a full TransUnion consumer credit report.
+
+        Args:
+            client_id: Life Shield client identifier.
+            consumer:  Dict with keys: ssn, dob, first_name, last_name,
+                       address ({line1, city, state, zip}).
+        """
+        self._validate_consumer(consumer)
+
+        payload = {
+            "request": {
+                "subscribers": [{
+                    "industryCode": "Y",
+                    "memberCode": self._api_key,
+                    "prefix": "TLS",
+                    "password": "",
+                }],
+                "permissiblePurpose": {
+                    "inquiryType": "Account Review",
+                    "leverageType": "Individual",
+                },
+                "product": [{
+                    "code": "06221",
+                    "subject": {
+                        "subjectRecord": {
+                            "indicative": {
+                                "name": [{
+                                    "person": {
+                                        "first": consumer["first_name"],
+                                        "last": consumer["last_name"],
+                                    }
+                                }],
+                                "address": [{
+                                    "status": "current",
+                                    "street": {"unparsed": consumer["address"]["line1"]},
+                                    "location": {
+                                        "city": consumer["address"]["city"],
+                                        "state": consumer["address"]["state"],
+                                        "zipCode": consumer["address"]["zip"],
+                                    },
+                                }],
+                                "socialSecurity": {
+                                    "number": consumer["ssn"].replace("-", "")
+                                },
+                                "dateOfBirth": consumer["dob"],
+                            }
+                        }
+                    },
+                }],
+            }
+        }
+
+        try:
+            raw = self._request(
+                "POST", "/report",
+                client_id=client_id, operation="pull_credit_report",
+                json=payload,
+            )
+        except CreditBureauError as exc:
+            raise ReportPullError(f"TransUnion report pull failed: {exc}") from exc
+
+        return self._normalise_report(raw, client_id)
+
+    def _normalise_report(self, raw: Dict[str, Any], client_id: str) -> Dict[str, Any]:
+        credit_report = raw.get("creditReport", {})
+        product = credit_report.get("product", [{}])
+        product_data = product[0] if isinstance(product, list) and product else product
+
+        score_val = None
+        score_models = product_data.get("scoreModel", [{}])
+        if score_models:
+            score_val = score_models[0].get("score", {}).get("results")
+
+        return {
+            "bureau": "transunion",
+            "client_id": client_id,
+            "report_date": datetime.now(timezone.utc).isoformat(),
+            "score": score_val,
+            "tradelines": product_data.get("tradeline", []),
+            "inquiries": product_data.get("inquiry", []),
+            "public_records": product_data.get("publicRecord", []),
+            "disputes": product_data.get("dispute", []),
+            "collections": product_data.get("collection", []),
+            "raw": raw,
+        }
+
+    # ------------------------------------------------------------------
+    # File dispute
+    # ------------------------------------------------------------------
+
+    def file_dispute(
+        self,
+        client_id: str,
+        consumer: Dict[str, Any],
+        item_id: str,
+        reason: str,
+        statement: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """File an FCRA dispute with TransUnion."""
+        self._validate_consumer(consumer, require_address=False)
+
+        payload = {
+            "dispute": {
+                "consumer": {
+                    "ssn": consumer["ssn"].replace("-", ""),
+                    "firstName": consumer["first_name"],
+                    "lastName": consumer["last_name"],
+                    "dob": consumer.get("dob", ""),
+                },
+                "items": [{
+                    "itemId": item_id,
+                    "disputeReason": reason,
+                    "consumerStatement": statement or "",
+                }],
+            }
+        }
+
+        try:
+            raw = self._request(
+                "POST", "/disputes",
+                client_id=client_id, operation="file_dispute",
+                json=payload,
+            )
+        except CreditBureauError as exc:
+            raise DisputeError(f"TransUnion dispute submission failed: {exc}") from exc
+
+        case_number = (
+            raw.get("confirmationNumber")
+            or raw.get("caseNumber")
+            or raw.get("disputeId")
+        )
+        if not case_number:
+            raise DisputeError("TransUnion dispute response missing confirmation number")
+
+        filed_at = datetime.now(timezone.utc)
+        return {
+            "bureau": "transunion",
+            "client_id": client_id,
+            "case_number": case_number,
+            "item_id": item_id,
+            "reason": reason,
+            "status": raw.get("status", "FILED"),
+            "filed_at": filed_at.isoformat(),
+            "expected_resolution_date": (filed_at + timedelta(days=30)).isoformat(),
+            "raw": raw,
+        }
+
+    # ------------------------------------------------------------------
+    # Dispute status
+    # ------------------------------------------------------------------
+
+    def get_dispute_status(
+        self, client_id: str, case_number: str, ssn: str
+    ) -> Dict[str, Any]:
+        """Check status of a previously filed TransUnion dispute."""
+        raw = self._request(
+            "GET", f"/disputes/{case_number}",
+            client_id=client_id, operation="get_dispute_status",
+            params={"ssn": ssn.replace("-", "")},
+        )
+        self._require_fields(raw, "status")
+
+        return {
+            "bureau": "transunion",
+            "client_id": client_id,
+            "case_number": case_number,
+            "status": raw["status"],
+            "updated_at": raw.get("lastUpdated", datetime.now(timezone.utc).isoformat()),
+            "expected_resolution_date": raw.get("expectedResolutionDate"),
+            "resolution": raw.get("resolution"),
+            "raw": raw,
+        }
+
+    # ------------------------------------------------------------------
+    # Monitor changes
+    # ------------------------------------------------------------------
+
+    def monitor_changes(
+        self, client_id: str, ssn: str, monitoring_type: str = "daily"
+    ) -> Dict[str, Any]:
+        """Poll TransUnion for changes to a consumer's credit file."""
+        raw = self._request(
+            "GET", "/monitoring/changes",
+            client_id=client_id, operation="monitor_changes",
+            params={"ssn": ssn.replace("-", ""), "monitoringType": monitoring_type},
+        )
+        changes = raw.get("changes", raw.get("creditFileChanges", []))
+        return {
+            "bureau": "transunion",
+            "client_id": client_id,
+            "changes": changes,
+            "change_count": len(changes),
+            "polled_at": datetime.now(timezone.utc).isoformat(),
+            "raw": raw,
+        }
+
+    # ------------------------------------------------------------------
+    # Health check
+    # ------------------------------------------------------------------
+
+    def health_check(self) -> bool:
+        """Return True if the TransUnion API is reachable."""
+        try:
+            self._get_token()
+            resp = self._session.get(
+                f"{self.base_url}/health",
+                headers={"Authorization": f"Bearer {self._token}"},
+                timeout=10,
+            )
+            return resp.status_code == 200
+        except Exception:
+            logger.warning("TransUnion health check failed", exc_info=True)
+            return False
+
+    # ------------------------------------------------------------------
+    # Validation
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _validate_consumer(consumer: Dict[str, Any], require_address: bool = True) -> None:
+        required = {"ssn", "dob", "first_name", "last_name"}
+        if require_address:
+            required.add("address")
+        missing = required - consumer.keys()
+        if missing:
+            raise ValidationError(f"Consumer dict missing required fields: {sorted(missing)}")
+        if require_address and "address" in consumer:
+            addr_required = {"line1", "city", "state", "zip"}
+            missing_addr = addr_required - consumer["address"].keys()
+            if missing_addr:
+                raise ValidationError(f"Consumer address missing fields: {sorted(missing_addr)}")
