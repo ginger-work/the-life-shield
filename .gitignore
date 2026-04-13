@@ -46,3 +46,8 @@ docker-compose.override.yml
 
 # Migrations (keep versions, ignore __pycache__)
 migrations/__pycache__/
+
+# SQLite test DB files
+file:*
+*.sqlite3
+*.db
