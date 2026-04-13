@@ -62,25 +62,25 @@ class ComplianceCheckResult:
 
 # Patterns that BLOCK sending/filing (hard violations)
 _BLOCK_PATTERNS = [
-    # Outcome guarantees
+    # Outcome guarantees — stem-match without strict trailing boundary
     (
-        r"\b(guarantee[sd]?|guaranteed)\b.{0,40}\b(remov|delet|wipe|erase|improv|increas)\b",
+        r"\b(guarantee[sd]?|guaranteed)\b.{0,50}(remov|delet|wipe|erase|improv|increas)",
         "croa.outcome_guarantee",
         "CROA § 4: Promise of credit repair outcome (removal, deletion, score increase) is prohibited.",
     ),
     (
-        r"\b(your score (will|shall|must) (go up|increase|improve|rise))\b",
+        r"\b(your score (will|shall|must) (go up|increase|improve|rise))",
         "croa.score_promise",
         "CROA § 4: Direct score improvement promise is prohibited.",
     ),
     (
-        r"\b(100%\s*(guaranteed|promise|certain|sure))\b",
+        r"(100%\s*(guaranteed|promise|certain|sure))",
         "croa.certainty_claim",
         "CROA § 4: Certainty claims about credit repair outcomes are prohibited.",
     ),
     # Identity fraud
     (
-        r"\b(create|establish|build|obtain).{0,20}(new|alternate|second|different).{0,20}(credit identity|credit file|SSN|EIN|CPN|credit profile)\b",
+        r"\b(create|establish|build|obtain).{0,20}(new|alternate|second|different).{0,20}(credit identity|credit file|ssn|ein|cpn|credit profile)",
         "fcra.identity_fraud",
         "FCRA: Advising clients to create a new credit identity is illegal.",
     ),
@@ -240,9 +240,8 @@ def check_content_compliance(content: str) -> ComplianceCheckResult:
                 matched_text=match.group(0),
             ))
             logger.warning(
-                "Compliance BLOCK violation found",
-                rule=rule_id,
-                matched=match.group(0),
+                "Compliance BLOCK violation found: rule=%s matched=%s",
+                rule_id, match.group(0),
             )
 
     for pattern, rule_id, description in _WARN_PATTERNS:

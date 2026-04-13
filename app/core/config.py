@@ -95,6 +95,27 @@ class Settings(BaseSettings):
 
     SENTRY_DSN: Optional[str] = None
 
+    # --- Credit Bureau APIs ---
+    BUREAU_SANDBOX_MODE: bool = True  # Set False in production with real API keys
+
+    # Equifax
+    EQUIFAX_CLIENT_ID: Optional[str] = None
+    EQUIFAX_CLIENT_SECRET: Optional[str] = None
+
+    # Experian
+    EXPERIAN_CLIENT_ID: Optional[str] = None
+    EXPERIAN_CLIENT_SECRET: Optional[str] = None
+    EXPERIAN_SUBCODE: Optional[str] = None
+
+    # TransUnion
+    TRANSUNION_API_KEY: Optional[str] = None
+    TRANSUNION_API_SECRET: Optional[str] = None
+    TRANSUNION_MEMBER_CODE: Optional[str] = None
+    TRANSUNION_SECURITY_CODE: Optional[str] = None
+
+    # iSoftPull
+    ISOFTPULL_API_KEY: Optional[str] = None
+
     # --- Logging ---
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"
