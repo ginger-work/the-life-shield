@@ -236,12 +236,13 @@ class TestPullCreditReport:
             with pytest.raises(ReportPullError):
                 client.pull_credit_report("client-001", VALID_CONSUMER)
 
-    def test_pull_report_401_raises_auth_error(self):
+    def test_pull_report_401_raises_report_pull_error_with_auth_cause(self):
+        """A 401 during report pull wraps as ReportPullError (caused by AuthenticationError)."""
         client = _make_client_with_token()
         mock_resp = _make_mock_response({}, status_code=401)
 
         with patch.object(client._session, "request", return_value=mock_resp):
-            with pytest.raises(AuthenticationError):
+            with pytest.raises(ReportPullError, match="authentication"):
                 client.pull_credit_report("client-001", VALID_CONSUMER)
 
     def test_pull_report_timeout_raises_credit_bureau_error(self):
