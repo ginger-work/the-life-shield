@@ -12,11 +12,14 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir pg8000==1.31.2
 
-# Expose port
-EXPOSE 8000
-
 # Copy application code
 COPY . .
 
-# Start command - shell form so $PORT expands
-CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Make startup script executable
+RUN chmod +x start.sh
+
+# Expose port
+EXPOSE 8000
+
+# Use shell script for proper env var expansion
+ENTRYPOINT ["sh", "start.sh"]
