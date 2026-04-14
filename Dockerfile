@@ -11,4 +11,4 @@ COPY . .
 
 EXPOSE 8000
 
-ENTRYPOINT ["python", "app_raw.py"]
+ENTRYPOINT ["python", "app_flask.py"]
