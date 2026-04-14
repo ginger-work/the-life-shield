@@ -3,8 +3,8 @@
  * Typed wrapper around all backend endpoints.
  */
 
-// Use local proxy to avoid CORS issues with Railway CDN
-const API_BASE = "/api/proxy";
+// Use local API proxy to avoid Railway CDN CORS issues
+const API_BASE = "/api";
 
 type FetchOptions = RequestInit & { token?: string };
 
@@ -28,7 +28,7 @@ async function fetchAPI<T>(
     }
   }
 
-  const response = await fetch(`${API_BASE}?path=${encodeURIComponent(path)}`, {
+  const response = await fetch(`${API_BASE}${path}`, {
     ...fetchOptions,
     headers,
   });

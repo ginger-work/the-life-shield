@@ -1,13 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   const { path } = req.query;
-  const pathStr = typeof path === 'string' ? path : '';
+  const pathStr = Array.isArray(path) ? path.join('/') : typeof path === 'string' ? path : '';
   
   if (!pathStr) {
     return res.status(400).json({ error: 'No path provided' });
@@ -25,7 +25,8 @@ export default async function handler(
       fetchOptions.body = JSON.stringify(req.body);
     }
     
-    const response = await fetch(`${API_URL}/${pathStr}`, fetchOptions);
+    const fullUrl = `${API_URL}/${pathStr}`;
+    const response = await fetch(fullUrl, fetchOptions);
     const data = await response.json();
     
     res.setHeader('Access-Control-Allow-Origin', '*');
