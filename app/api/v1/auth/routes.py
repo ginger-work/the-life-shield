@@ -151,22 +151,21 @@ class ResetPasswordRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 def _hash_password(password: str) -> str:
-    try:
-        from app.core.security import hash_password
-        return hash_password(password)
-    except Exception:
-        from middleware.auth import hash_password
-        return hash_password(password)
+    """Hash password using bcrypt directly - no external dependencies."""
+    import bcrypt
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
 def _verify_password(plain: str, hashed: str) -> bool:
+    """Verify password against bcrypt hash."""
+    import bcrypt
     try:
-        from app.core.security import verify_password
-        return verify_password(plain, hashed)
+        return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
     except Exception:
-        from middleware.auth import verify_password
-        return verify_password(plain, hashed)
+        return False
 
+
+# _verify_password defined above
 
 def _create_access_token(user_id: str, role: str) -> str:
     try:
@@ -201,13 +200,9 @@ def _is_async_session(db) -> bool:
 
 
 def _get_user_model():
-    """Get User model — prefers top-level models for test compatibility."""
-    try:
-        from models.user import User  # Top-level: used by tests
-        return User
-    except Exception:
-        from app.models.user import User
-        return User
+    """Get User model — always uses app/models/user (single source of truth)."""
+    from app.models.user import User
+    return User
 
 
 async def _db_get_user_by_email(db, email: str):
@@ -253,38 +248,31 @@ async def _db_commit(db):
 
 
 def _make_user(body: RegisterRequest, hashed_password: str, now: datetime):
-    """Create a User object from signup data — prefers top-level models for test compat."""
-    try:
-        from models.user import User, UserRole  # Top-level: matches test DB
-        return User(
-            email=body.email,
-            hashed_password=hashed_password,
-            first_name=body.first_name,
-            last_name=body.last_name,
-            phone=body.phone,
-            role=UserRole.CLIENT,
-            sms_consent=body.sms_consent,
-            sms_consent_at=now if body.sms_consent else None,
-            email_consent=body.email_consent,
-            email_consent_at=now if body.email_consent else None,
-            voice_consent=getattr(body, "voice_consent", False),
-        )
-    except Exception:
-        from app.models.user import User, UserRole, UserStatus
-        return User(
-            id=uuid.uuid4(),
-            email=body.email,
-            hashed_password=hashed_password,
-            first_name=body.first_name,
-            last_name=body.last_name,
-            phone=body.phone,
-            role=UserRole.CLIENT,
-            status=UserStatus.ACTIVE,
-            sms_consent=body.sms_consent,
-            sms_consent_at=now if body.sms_consent else None,
-            email_consent=body.email_consent,
-            email_consent_at=now if body.email_consent else None,
-        )
+    """Create a User object - only uses fields confirmed in app/models/user.py"""
+    from app.models.user import User, UserRole, UserStatus
+    return User(
+        id=uuid.uuid4(),
+        email=body.email.lower().strip(),
+        password_hash=hashed_password,
+        role=UserRole.CLIENT,
+        status=UserStatus.ACTIVE,
+        email_verified=False,
+    )
+
+
+def _make_client_profile(user_id, body: RegisterRequest):
+    """Create ClientProfile with personal info from signup body."""
+    from app.models.client import ClientProfile, ClientStatus, SubscriptionPlan
+    first = getattr(body, 'first_name', '') or ''
+    last = getattr(body, 'last_name', '') or ''
+    full_name = f"{first} {last}".strip() or body.email
+    return ClientProfile(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        full_name=full_name,
+        subscription_status=ClientStatus.PENDING_ONBOARDING,
+        subscription_plan=SubscriptionPlan.BASIC,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -346,6 +334,13 @@ async def register(body: RegisterRequest, db=Depends(get_db)):
     user = _make_user(body, hashed, now)
     await _db_add(db, user)
 
+    # Create ClientProfile (name, phone stored here per model design)
+    try:
+        profile = _make_client_profile(user.id, body)
+        await _db_add(db, profile)
+    except Exception as e:
+        log.warning("profile_create_skipped", error=str(e))
+
     user_id_str = str(user.id)
     role_str = str(getattr(user, "role", "client"))
     access_token = _create_access_token(user_id_str, role_str)
@@ -385,7 +380,7 @@ async def login(body: LoginRequest, request: Request, db=Depends(get_db)):
     """Authenticate and receive JWT tokens."""
     user = await _db_get_user_by_email(db, body.email)
 
-    if not user or not _verify_password(body.password, user.hashed_password):
+    if not user or not _verify_password(body.password, user.password_hash):
         log.warning("login_failed", email=body.email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -461,17 +456,28 @@ async def logout(
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user=Depends(get_current_user)):
     """Return authenticated user's profile."""
+    # Get name from ClientProfile if available
+    profile = getattr(current_user, 'client_profile', None)
+    full_name = getattr(profile, 'full_name', '') if profile else ''
+    name_parts = full_name.split(' ', 1) if full_name else ['', '']
+    first_name = name_parts[0]
+    last_name = name_parts[1] if len(name_parts) > 1 else ''
+
+    status_val = getattr(current_user, 'status', None)
+    is_active = str(status_val) not in ('inactive', 'suspended', 'UserStatus.INACTIVE', 'UserStatus.SUSPENDED') if status_val else True
+    email_verified = getattr(current_user, 'email_verified', False)
+
     return UserResponse(
         id=str(current_user.id),
         email=current_user.email,
-        first_name=current_user.first_name,
-        last_name=current_user.last_name,
-        role=str(getattr(current_user, "role", "client")),
-        is_active=getattr(current_user, "is_active", True),
-        is_verified=getattr(current_user, "is_verified", False),
-        sms_consent=getattr(current_user, "sms_consent", False),
-        email_consent=getattr(current_user, "email_consent", False),
-        created_at=str(getattr(current_user, "created_at", datetime.now(timezone.utc))),
+        first_name=first_name,
+        last_name=last_name,
+        role=str(getattr(current_user, 'role', 'client')),
+        is_active=is_active,
+        is_verified=email_verified,
+        sms_consent=False,
+        email_consent=False,
+        created_at=str(getattr(current_user, 'created_at', datetime.now(timezone.utc))),
     )
 
 
@@ -503,7 +509,7 @@ async def reset_password(body: ResetPasswordRequest, db=Depends(get_db)):
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    user.hashed_password = _hash_password(body.new_password)
+    user.password_hash = _hash_password(body.new_password)
     await _db_commit(db)
     log.info("password_reset_complete", email=email)
     return {"message": "Password reset successfully"}

@@ -15,8 +15,8 @@ from enum import Enum
 from typing import Any, Optional
 from uuid import UUID
 
+import bcrypt as _bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -24,42 +24,31 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
-# Password Hashing
+# Password Hashing (native bcrypt - passlib removed for Python 3.14 compat)
 # ---------------------------------------------------------------------------
-
-# bcrypt is the correct choice: slow by design, adaptive cost factor
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__rounds=settings.BCRYPT_ROUNDS,
-)
-
 
 def hash_password(plain_password: str) -> str:
     """
     Hash a plain-text password with bcrypt.
-
-    Args:
-        plain_password: The password to hash
-
-    Returns:
-        Bcrypt hash string (includes salt and cost factor)
+    Returns bcrypt hash string (includes salt and cost factor).
     """
-    return pwd_context.hash(plain_password)
+    rounds = getattr(settings, 'BCRYPT_ROUNDS', 12)
+    salt = _bcrypt.gensalt(rounds=rounds)
+    return _bcrypt.hashpw(plain_password.encode('utf-8'), salt).decode('utf-8')
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a plain-text password against its bcrypt hash.
-
-    Args:
-        plain_password: Candidate password from user
-        hashed_password: Stored bcrypt hash
-
-    Returns:
-        True if password matches, False otherwise
+    Returns True if password matches, False otherwise.
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return _bcrypt.checkpw(
+            plain_password.encode('utf-8'),
+            hashed_password.encode('utf-8')
+        )
+    except Exception:
+        return False
 
 
 def validate_password_strength(password: str) -> list[str]:
