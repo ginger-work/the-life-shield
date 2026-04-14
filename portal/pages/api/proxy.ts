@@ -1,10 +1,15 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+type ResponseData = any;
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ResponseData>
+) {
   const { path } = req.query;
-  const pathStr = Array.isArray(path) ? path.join('/') : path || '';
+  const pathStr = Array.isArray(path) ? path.join('/') : typeof path === 'string' ? path : '';
   
   try {
     const response = await fetch(`${API_URL}/${pathStr}`, {
@@ -24,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     
     res.status(response.status).json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Proxy error' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Proxy error' });
   }
 }
