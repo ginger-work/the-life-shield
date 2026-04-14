@@ -167,11 +167,11 @@ export default function CreditPage() {
               </button>
             ))}
             <button
-              className="ml-auto bg-[#c4922a] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#d9a84e] disabled:opacity-50"
+              className="ml-auto bg-[#1a2744] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#243358] disabled:opacity-50"
               onClick={handlePullReport}
               disabled={pulling}
             >
-              {pulling ? "Pulling…" : "🔄 Pull New Report"}
+              {pulling ? "Refreshing..." : "Refresh Report"}
             </button>
           </div>
 
@@ -254,7 +254,7 @@ export default function CreditPage() {
                           {item.account_type && <span className="capitalize">{item.account_type.replace(/_/g, " ")}</span>}
                         </div>
                       </div>
-                      <span className="text-green-600 text-sm">✓ Good standing</span>
+                      <span className="text-green-600 text-sm font-medium">In Good Standing</span>
                     </div>
                   ))}
                   {filterByBureau(tradelines).length === 0 && (

@@ -17,8 +17,8 @@ export function Header({ title, scores }: HeaderProps) {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-      <h1 className="text-xl font-semibold text-[#1a2744]">{title}</h1>
+    <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
+      <h1 className="text-lg font-semibold text-[#111827] tracking-tight">{title}</h1>
 
       <div className="flex items-center gap-6">
         {/* Mini score badges */}

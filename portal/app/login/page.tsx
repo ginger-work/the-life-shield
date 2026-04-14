@@ -31,71 +31,72 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-[#1a2744] rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">
-            🛡️
+          <div className="w-14 h-14 bg-[#1a2744] rounded-xl flex items-center justify-center mx-auto mb-4 shadow-md">
+            <svg width="26" height="26" fill="none" stroke="white" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
           </div>
-          <h1 className="text-2xl font-bold text-[#1a2744]">The Life Shield</h1>
-          <p className="text-gray-500 text-sm mt-1">Sign in to your credit portal</p>
+          <h1 className="text-2xl font-semibold text-[#1a2744] tracking-tight">The Life Shield</h1>
+          <p className="text-gray-500 text-sm mt-1.5 leading-relaxed">Sign in to your credit portal</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm leading-relaxed">
                 {error}
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="you@example.com"
-                className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#c4922a] focus:border-transparent"
+                placeholder="your@email.com"
+                className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#c4922a] focus:border-transparent bg-gray-50 focus:bg-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-gray-700">Password</label>
+                <a href="/forgot-password" className="text-xs text-[#c4922a] hover:underline">
+                  Forgot password?
+                </a>
+              </div>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="••••••••"
-                className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#c4922a] focus:border-transparent"
+                placeholder="Enter your password"
+                className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#c4922a] focus:border-transparent bg-gray-50 focus:bg-white"
               />
-            </div>
-
-            <div className="flex justify-end">
-              <a href="/forgot-password" className="text-sm text-[#c4922a] hover:underline">
-                Forgot password?
-              </a>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#c4922a] text-white py-3 rounded-lg font-semibold hover:bg-[#d9a84e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full bg-[#1a2744] text-white py-3 rounded-lg font-medium hover:bg-[#243358] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm tracking-wide mt-2"
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-6">
-            Don't have an account?{" "}
+            New to The Life Shield?{" "}
             <a href="/register" className="text-[#c4922a] font-medium hover:underline">
-              Get started
+              Create an account
             </a>
           </p>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-4">
-          Tim Shaw may be involved in your session. Tim Shaw is an AI agent.
+        <p className="text-center text-xs text-gray-400 mt-5 leading-relaxed">
+          This portal is monitored by licensed credit professionals. Tim Shaw is an AI agent.
         </p>
       </div>
     </div>

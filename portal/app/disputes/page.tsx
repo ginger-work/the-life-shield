@@ -18,10 +18,10 @@ const STATUS_BADGE: Record<string, { color: string; label: string }> = {
 };
 
 const OUTCOME_BADGE: Record<string, { color: string; label: string }> = {
-  removed: { color: "bg-green-100 text-green-700", label: "✓ Removed" },
-  updated: { color: "bg-yellow-100 text-yellow-700", label: "⟳ Updated" },
-  verified: { color: "bg-red-100 text-red-700", label: "✗ Verified" },
-  pending: { color: "bg-blue-100 text-blue-700", label: "⧗ Pending" },
+  removed: { color: "bg-green-100 text-green-700", label: "Removed" },
+  updated: { color: "bg-yellow-100 text-yellow-700", label: "Updated" },
+  verified: { color: "bg-red-100 text-red-700", label: "Verified" },
+  pending: { color: "bg-blue-100 text-blue-700", label: "Pending" },
 };
 
 const DISPUTE_REASONS = [
@@ -198,11 +198,15 @@ function DisputesContent() {
 
           {!loading && disputes.length === 0 && (
             <div className="bg-white rounded-xl p-12 text-center shadow-sm border border-gray-100">
-              <p className="text-4xl mb-3">⚖️</p>
-              <p className="text-[#1a2744] font-semibold">No disputes yet</p>
-              <p className="text-gray-500 text-sm mt-1">View your credit report to identify items to dispute.</p>
-              <a href="/credit" className="text-[#c4922a] text-sm mt-3 inline-block hover:underline">
-                View Credit Report →
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg width="22" height="22" fill="none" stroke="#6b7280" viewBox="0 0 24 24" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                </svg>
+              </div>
+              <p className="text-[#1a2744] font-semibold">No disputes on record</p>
+              <p className="text-gray-500 text-sm mt-1.5 leading-relaxed">Review your credit report to identify inaccuracies eligible for dispute.</p>
+              <a href="/credit" className="text-[#c4922a] text-sm mt-3 inline-block hover:underline font-medium">
+                View Credit Report
               </a>
             </div>
           )}
@@ -265,29 +269,29 @@ function DisputesContent() {
 
                 {/* Approval CTA */}
                 {dispute.status === "pending_approval" && (
-                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800 font-medium">📋 Your approval is required</p>
-                    <p className="text-xs text-yellow-700 mt-1">Review and approve the dispute letter before it can be filed.</p>
-                    <div className="mt-2 flex gap-2">
+                  <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800 font-semibold">Action Required — Letter Approval</p>
+                    <p className="text-xs text-amber-700 mt-1 leading-relaxed">Please review and approve the dispute letter before it can be submitted to the credit bureau.</p>
+                    <div className="mt-3 flex gap-2">
                       <button
-                        className="bg-yellow-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-yellow-700 disabled:opacity-50"
+                        className="bg-[#1a2744] text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-[#243358] disabled:opacity-50"
                         disabled={approvingId === dispute.id}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleApproveLetter(dispute.id, true);
                         }}
                       >
-                        {approvingId === dispute.id ? "Approving…" : "✓ Approve Letter"}
+                        {approvingId === dispute.id ? "Approving..." : "Approve Letter"}
                       </button>
                       <button
-                        className="border border-red-300 text-red-600 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-50 disabled:opacity-50"
+                        className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-xs font-medium hover:bg-gray-50 disabled:opacity-50"
                         disabled={approvingId === dispute.id}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleApproveLetter(dispute.id, false);
                         }}
                       >
-                        ✗ Reject
+                        Request Revision
                       </button>
                     </div>
                   </div>

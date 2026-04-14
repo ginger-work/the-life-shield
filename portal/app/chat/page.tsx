@@ -93,7 +93,7 @@ export default function ChatPage() {
         const escalationNote: ChatMessage = {
           id: (Date.now() + 2).toString(),
           direction: "outbound",
-          content: "🔔 A human specialist has been notified and will follow up shortly.",
+          content: "A licensed specialist has been notified and will follow up with you shortly.",
           channel,
           created_at: new Date().toISOString(),
           agent: "System",
@@ -125,7 +125,7 @@ export default function ChatPage() {
         {
           id: Date.now().toString(),
           direction: "outbound",
-          content: "✅ Your request has been escalated to a human specialist. Someone from our team will reach out to you shortly.",
+          content: "Your request has been escalated. A licensed specialist from our team will reach out to you shortly.",
           channel,
           created_at: new Date().toISOString(),
           agent: "System",
@@ -139,7 +139,7 @@ export default function ChatPage() {
         {
           id: Date.now().toString(),
           direction: "outbound",
-          content: "Escalation submitted. A team member will contact you within 24 hours.",
+          content: "Your request has been submitted. A team member will contact you within 24 hours.",
           channel,
           created_at: new Date().toISOString(),
           agent: "System",

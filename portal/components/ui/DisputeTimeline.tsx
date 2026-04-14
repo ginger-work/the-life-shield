@@ -44,13 +44,19 @@ export function DisputeTimeline({ status }: DisputeTimelineProps) {
               )}
               {/* Circle */}
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold border-2 ${
                   isCompleted
                     ? "bg-[#c4922a] border-[#c4922a] text-white"
                     : "bg-white border-gray-200 text-gray-400"
                 } ${isCurrent ? "ring-2 ring-[#c4922a] ring-offset-2" : ""}`}
               >
-                {isCompleted ? "✓" : idx + 1}
+                {isCompleted ? (
+                  <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <span className="text-xs">{idx + 1}</span>
+                )}
               </div>
               {idx < STEPS.length - 1 && (
                 <div

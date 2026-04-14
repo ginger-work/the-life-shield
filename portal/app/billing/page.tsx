@@ -94,7 +94,7 @@ export default function BillingPage() {
     setUpgrading(planId);
     try {
       await api.billing.upgradeSubscription(planId);
-      showToast("Plan updated successfully!", "success");
+      showToast("Your plan has been updated successfully.", "success");
       await loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to update plan";
@@ -189,17 +189,17 @@ export default function BillingPage() {
               {/* Actions */}
               <div className="flex gap-3">
                 <button
-                  className="flex-1 bg-white border border-[#c4922a] text-[#c4922a] py-2.5 rounded-lg font-medium hover:bg-[#c4922a]/5"
+                  className="flex-1 bg-white border border-[#c4922a] text-[#c4922a] py-2.5 rounded-lg font-medium hover:bg-[#c4922a]/5 text-sm"
                   onClick={() => {
                     const nextPlan = plans.find(p => p.price_monthly > sub.price_monthly);
                     if (nextPlan) handleUpgrade(nextPlan.id);
                   }}
                 >
-                  ⬆️ Upgrade Plan
+                  Upgrade Plan
                 </button>
                 <button
                   onClick={() => setShowCancel(true)}
-                  className="flex-1 bg-white border border-gray-200 text-gray-600 py-2.5 rounded-lg font-medium hover:bg-gray-50"
+                  className="flex-1 bg-white border border-gray-200 text-gray-600 py-2.5 rounded-lg font-medium hover:bg-gray-50 text-sm"
                 >
                   Cancel Subscription
                 </button>

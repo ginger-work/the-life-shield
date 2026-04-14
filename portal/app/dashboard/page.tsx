@@ -97,53 +97,55 @@ export default function DashboardPage() {
           {/* KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Active Disputes</p>
-              <p className="text-3xl font-bold text-[#1a2744] mt-1">{data?.active_disputes ?? 0}</p>
-              <p className="text-xs text-orange-500 mt-1">Under investigation</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Disputes</p>
+              <p className="text-3xl font-bold text-[#1a2744] mt-2 leading-none">{data?.active_disputes ?? 0}</p>
+              <p className="text-xs text-orange-500 mt-2">Under investigation</p>
             </div>
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Resolved</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{data?.resolved_disputes ?? 0}</p>
-              <p className="text-xs text-green-500 mt-1">Items removed or updated</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Resolved</p>
+              <p className="text-3xl font-bold text-green-600 mt-2 leading-none">{data?.resolved_disputes ?? 0}</p>
+              <p className="text-xs text-green-500 mt-2">Items removed or corrected</p>
             </div>
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Documents</p>
-              <p className="text-3xl font-bold text-[#1a2744] mt-1">{data?.documents_pending ?? 0}</p>
-              <p className="text-xs text-yellow-500 mt-1">Pending review</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Documents</p>
+              <p className="text-3xl font-bold text-[#1a2744] mt-2 leading-none">{data?.documents_pending ?? 0}</p>
+              <p className="text-xs text-amber-600 mt-2">Awaiting review</p>
             </div>
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Plan</p>
-              <p className="text-xl font-bold text-[#c4922a] mt-1 capitalize">{data?.subscription?.plan || "None"}</p>
-              <p className="text-xs text-green-500 mt-1 capitalize">{data?.subscription?.status || "—"}</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Membership</p>
+              <p className="text-xl font-bold text-[#c4922a] mt-2 leading-none capitalize">{data?.subscription?.plan || "None"}</p>
+              <p className="text-xs text-green-500 mt-2 capitalize">{data?.subscription?.status || "—"}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Next appointment */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-sm font-semibold text-[#1a2744] uppercase tracking-wide mb-4">Next Appointment</h2>
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Next Appointment</h2>
               {data?.next_appointment ? (
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-[#1a2744] rounded-lg flex items-center justify-center text-white text-xl">
-                    📅
+                  <div className="w-11 h-11 bg-[#f4f6f9] border border-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" fill="none" stroke="#1a2744" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                   </div>
                   <div>
-                    <p className="font-semibold text-[#1a2744] capitalize">
+                    <p className="font-semibold text-[#1a2744] capitalize text-sm">
                       {data.next_appointment.type.replace(/_/g, " ")}
                     </p>
-                    <p className="text-sm text-gray-500 mt-0.5">
+                    <p className="text-sm text-gray-500 mt-1 leading-relaxed">
                       {new Date(data.next_appointment.scheduled_at).toLocaleDateString([], {
                         weekday: "long", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
                       })}
                     </p>
-                    <p className="text-xs text-gray-400 capitalize mt-0.5">via {data.next_appointment.meeting_type}</p>
+                    <p className="text-xs text-gray-400 capitalize mt-1">Via {data.next_appointment.meeting_type}</p>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-4">
-                  <p className="text-gray-400 text-sm">No upcoming appointments</p>
-                  <a href="/appointments" className="text-[#c4922a] text-sm mt-2 inline-block hover:underline">
-                    Schedule one →
+                <div className="py-4">
+                  <p className="text-gray-400 text-sm">No upcoming appointments scheduled.</p>
+                  <a href="/appointments" className="text-[#c4922a] text-sm mt-2 inline-block hover:underline font-medium">
+                    Schedule a session
                   </a>
                 </div>
               )}
@@ -178,21 +180,21 @@ export default function DashboardPage() {
           <div className="flex gap-3 flex-wrap">
             <a
               href="/disputes"
-              className="bg-[#c4922a] text-white px-5 py-3 rounded-lg font-medium hover:bg-[#d9a84e] transition-colors"
+              className="bg-[#c4922a] text-white px-5 py-3 rounded-lg font-medium hover:bg-[#b8841f] transition-colors text-sm"
             >
-              + Start New Dispute
+              File New Dispute
             </a>
             <a
               href="/chat"
-              className="bg-[#1a2744] text-white px-5 py-3 rounded-lg font-medium hover:bg-[#2a3a5e] transition-colors"
+              className="bg-[#1a2744] text-white px-5 py-3 rounded-lg font-medium hover:bg-[#243358] transition-colors text-sm"
             >
-              💬 Message Tim Shaw
+              Message Tim Shaw
             </a>
             <a
               href="/documents"
-              className="bg-white text-[#1a2744] border border-gray-200 px-5 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              className="bg-white text-[#1a2744] border border-gray-200 px-5 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm"
             >
-              📁 View Documents
+              View Documents
             </a>
           </div>
         </main>
