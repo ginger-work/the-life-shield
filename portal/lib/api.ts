@@ -161,6 +161,30 @@ export interface Subscription {
   features: string[];
 }
 
+export interface PaymentMethod {
+  id: string;
+  brand: string;
+  last4: string;
+  exp_month: number;
+  exp_year: number;
+  is_default: boolean;
+}
+
+export interface Consent {
+  sms_consent: boolean;
+  email_consent: boolean;
+  voice_consent: boolean;
+  updated_at?: string;
+}
+
+export interface ScoreHistoryEntry {
+  date: string;
+  equifax?: number;
+  experian?: number;
+  transunion?: number;
+  average?: number;
+}
+
 export interface Payment {
   id: string;
   amount: number;
@@ -433,6 +457,192 @@ export const api = {
           category: string;
         }>;
       }>("/products"),
+  },
+
+  // ─── Billing (named aliases) ──────────────────────────────────────────────────
+  billing: {
+    getSubscriptionPlans: () =>
+      fetchAPI<{ success: boolean; plans: SubscriptionPlan[] }>("/products/subscriptions/plans"),
+
+    getCurrentSubscription: () =>
+      fetchAPI<{ success: boolean; subscription: Subscription | null }>("/products/subscriptions/mine"),
+
+    upgradeSubscription: (plan_id: string, payment_token?: string) =>
+      fetchAPI<{ success: boolean; subscription_id: string }>("/products/subscriptions", {
+        method: "POST",
+        body: JSON.stringify({ plan_id, payment_token: payment_token || "demo_token" }),
+      }),
+
+    cancelSubscription: (subscriptionId: string, reason?: string) =>
+      fetchAPI<{ success: boolean; message: string }>(
+        `/products/subscriptions/${subscriptionId}?reason=${reason || ""}`,
+        { method: "DELETE" }
+      ),
+
+    getPaymentMethods: () =>
+      fetchAPI<{ success: boolean; payment_methods: PaymentMethod[] }>("/products/billing/payment-methods"),
+
+    addPaymentMethod: (token: string) =>
+      fetchAPI<{ success: boolean; payment_method: PaymentMethod }>("/products/billing/payment-methods", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      }),
+
+    removePaymentMethod: (methodId: string) =>
+      fetchAPI<{ success: boolean }>(`/products/billing/payment-methods/${methodId}`, { method: "DELETE" }),
+
+    getBillingHistory: (limit: number = 20) =>
+      fetchAPI<{ success: boolean; payments: Payment[]; total: number }>(
+        `/products/billing/history?limit=${limit}`
+      ),
+  },
+
+  // ─── Credit Reports (named aliases) ──────────────────────────────────────────
+  creditReports: {
+    getCreditSummary: () =>
+      fetchAPI<{
+        success: boolean;
+        client_id: string;
+        scores: CreditReport[];
+        open_dispute_count: number;
+        score_trend: string;
+      }>("/credit/summary"),
+
+    getCreditReports: () =>
+      fetchAPI<{ success: boolean; reports: CreditReport[] }>("/credit/reports"),
+
+    getScoreHistory: (days: number = 90) =>
+      fetchAPI<{ success: boolean; history: ScoreHistoryEntry[] }>(`/credit/score-history?days=${days}`),
+
+    getTradelines: () =>
+      fetchAPI<{
+        success: boolean;
+        tradelines: CreditItem[];
+        inquiries: CreditItem[];
+        negative_items: CreditItem[];
+      }>("/credit/tradelines"),
+
+    requestSoftPull: () =>
+      fetchAPI<{ success: boolean; message: string }>("/credit/soft-pull", {
+        method: "POST",
+        body: JSON.stringify({}),
+      }),
+  },
+
+  // ─── Disputes (named aliases + extras) ───────────────────────────────────────
+  disputesMgmt: {
+    fileDispute: (data: {
+      tradeline_id: string;
+      bureau: string;
+      dispute_reason: string;
+      client_statement?: string;
+    }) =>
+      fetchAPI<{ success: boolean; dispute_id: string }>("/disputes", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+
+    getDisputes: () =>
+      fetchAPI<{ success: boolean; disputes: DisputeCase[]; total: number }>("/disputes"),
+
+    getDisputeDetail: (disputeId: string) =>
+      fetchAPI<{
+        success: boolean;
+        dispute: DisputeCase;
+        letter?: { content: string; status: string };
+        bureau_responses: Array<{ bureau: string; response_date: string; outcome: string; summary?: string }>;
+      }>(`/disputes/${disputeId}`),
+
+    updateDisputeStatus: (disputeId: string, status: string, notes?: string) =>
+      fetchAPI<{ success: boolean }>(`/disputes/${disputeId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, notes }),
+      }),
+
+    approveLetter: (disputeId: string, approved: boolean, notes?: string) =>
+      fetchAPI<{ success: boolean }>(`/disputes/${disputeId}/approve-letter`, {
+        method: "POST",
+        body: JSON.stringify({ approved, notes }),
+      }),
+
+    getDisputeLetter: (disputeId: string) =>
+      fetchAPI<{ success: boolean; letter: { content: string; status: string } }>(
+        `/disputes/${disputeId}/letter`
+      ),
+  },
+
+  // ─── Tim Shaw Chat (named aliases) ────────────────────────────────────────────
+  timShaw: {
+    sendMessage: (message: string, channel: string = "portal_chat") =>
+      fetchAPI<{
+        success: boolean;
+        agent: string;
+        response: string;
+        channel: string;
+        requires_human: boolean;
+        timestamp: string;
+      }>("/agents/chat", {
+        method: "POST",
+        body: JSON.stringify({ message, channel }),
+      }),
+
+    getChatHistory: (clientId: string, limit: number = 50, offset: number = 0) =>
+      fetchAPI<{ success: boolean; messages: ChatMessage[]; total: number }>(
+        `/agents/history/${clientId}?limit=${limit}&offset=${offset}`
+      ),
+
+    getAgentStatus: () =>
+      fetchAPI<{
+        agent: string;
+        status: string;
+        expected_response_time: string;
+        channels: string[];
+        disclosure: string;
+      }>("/agents/status"),
+
+    escalateToHuman: (reason: string, message?: string) =>
+      fetchAPI<{ success: boolean; escalation_id?: string; message: string }>("/agents/escalate", {
+        method: "POST",
+        body: JSON.stringify({ reason, message }),
+      }),
+  },
+
+  // ─── Dashboard & Profile (named aliases) ──────────────────────────────────────
+  profile: {
+    getDashboard: () =>
+      fetchAPI<{
+        success: boolean;
+        data: {
+          scores: Record<string, { score: number; pulled_at: string }>;
+          active_disputes: number;
+          resolved_disputes: number;
+          next_appointment?: Appointment;
+          recent_activity: Array<{ id: string; channel: string; summary: string; created_at: string }>;
+          documents_pending: number;
+          subscription?: { plan: string; status: string };
+        };
+      }>("/clients/me/dashboard"),
+
+    getProfile: () => fetchAPI<ClientProfile>("/clients/me"),
+
+    updateProfile: (data: Partial<ClientProfile>) =>
+      fetchAPI<ClientProfile>("/clients/me", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+
+    getConsents: () =>
+      fetchAPI<{ success: boolean; consents: Consent }>("/clients/me/consents"),
+
+    updateConsent: (data: {
+      sms_consent?: boolean;
+      email_consent?: boolean;
+      voice_consent?: boolean;
+    }) =>
+      fetchAPI<{ success: boolean }>("/clients/me/consent", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
   },
 };
 

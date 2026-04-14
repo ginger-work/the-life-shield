@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { label: "Appointments", href: "/appointments", icon: "📅" },
   { label: "Documents", href: "/documents", icon: "📁" },
   { label: "Billing", href: "/billing", icon: "💳" },
+  { label: "Profile", href: "/profile", icon: "👤" },
 ];
 
 export function Sidebar() {
