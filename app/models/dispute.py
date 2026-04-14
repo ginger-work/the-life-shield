@@ -12,7 +12,7 @@ from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from sqlalchemy import (
-    Boolean, DateTime, Enum, ForeignKey, Index,
+    Boolean, DateTime, ForeignKey, Index,
     Integer, String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import JSON, UUID
@@ -113,8 +113,8 @@ class DisputeCase(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
         doc="equifax, experian, transunion",
     )
-    dispute_reason: Mapped[DisputeReason] = mapped_column(
-        Enum(DisputeReason, name="dispute_reason_enum"),
+    dispute_reason: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
     )
     item_description: Mapped[Optional[str]] = mapped_column(
@@ -132,10 +132,10 @@ class DisputeCase(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     # Status & Timeline
-    status: Mapped[DisputeStatus] = mapped_column(
-        Enum(DisputeStatus, name="dispute_status_enum"),
+    status: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=DisputeStatus.PENDING_APPROVAL,
+        default="pending_approval",
         index=True,
     )
     filed_date: Mapped[Optional[datetime]] = mapped_column(
@@ -153,8 +153,8 @@ class DisputeCase(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     # Outcome
-    outcome: Mapped[Optional[BureauResponseType]] = mapped_column(
-        Enum(BureauResponseType, name="bureau_response_type_enum"),
+    outcome: Mapped[Optional[str]] = mapped_column(
+        String(50),
         nullable=True,
     )
     outcome_date: Mapped[Optional[datetime]] = mapped_column(
@@ -306,10 +306,10 @@ class DisputeLetter(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     # Status
-    status: Mapped[LetterStatus] = mapped_column(
-        Enum(LetterStatus, name="letter_status_enum"),
+    status: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=LetterStatus.DRAFT,
+        default="draft",
         index=True,
     )
 
@@ -362,8 +362,8 @@ class BureauResponse(UUIDPrimaryKeyMixin, Base):
         DateTime(timezone=True),
         nullable=False,
     )
-    response_type: Mapped[BureauResponseType] = mapped_column(
-        Enum(BureauResponseType, name="bureau_response_type_enum2"),
+    response_type: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
     )
     response_content: Mapped[Optional[str]] = mapped_column(

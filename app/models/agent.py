@@ -12,7 +12,7 @@ from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from sqlalchemy import (
-    Boolean, DateTime, Enum, Float, ForeignKey, Index,
+    Boolean, DateTime, Float, ForeignKey, Index,
     Integer, String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import JSON, UUID
@@ -80,16 +80,16 @@ class AgentProfile(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         doc="Agent's display name (e.g., 'Tim Shaw')",
     )
-    role: Mapped[AgentRole] = mapped_column(
-        Enum(AgentRole, name="agent_role_enum"),
+    role: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
         index=True,
         doc="Functional role of this agent in the system",
     )
-    status: Mapped[AgentStatus] = mapped_column(
-        Enum(AgentStatus, name="agent_status_enum"),
+    status: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=AgentStatus.ACTIVE,
+        default="active",
         index=True,
     )
 
@@ -129,8 +129,8 @@ class AgentProfile(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     # Voice Settings
-    voice_provider: Mapped[Optional[VoiceProvider]] = mapped_column(
-        Enum(VoiceProvider, name="voice_provider_enum"),
+    voice_provider: Mapped[Optional[str]] = mapped_column(
+        String(50),
         nullable=True,
     )
     voice_id: Mapped[Optional[str]] = mapped_column(
@@ -145,8 +145,8 @@ class AgentProfile(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     # Avatar / Video Settings
-    avatar_type: Mapped[Optional[AvatarType]] = mapped_column(
-        Enum(AvatarType, name="avatar_type_enum"),
+    avatar_type: Mapped[Optional[str]] = mapped_column(
+        String(50),
         nullable=True,
     )
     avatar_id: Mapped[Optional[str]] = mapped_column(

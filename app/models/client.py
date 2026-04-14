@@ -15,7 +15,7 @@ from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from sqlalchemy import (
-    Boolean, DateTime, Enum, Float, ForeignKey, Index,
+    Boolean, DateTime, Float, ForeignKey, Index,
     Integer, Numeric, String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import JSON, UUID
@@ -148,14 +148,14 @@ class ClientProfile(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     country: Mapped[str] = mapped_column(String(2), nullable=False, default="US")
 
     # Subscription
-    subscription_plan: Mapped[Optional[SubscriptionPlan]] = mapped_column(
-        Enum(SubscriptionPlan, name="subscription_plan_enum"),
+    subscription_plan: Mapped[Optional[str]] = mapped_column(
+        String(50),
         nullable=True,
     )
-    subscription_status: Mapped[ClientStatus] = mapped_column(
-        Enum(ClientStatus, name="client_status_enum"),
+    subscription_status: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=ClientStatus.PENDING_ONBOARDING,
+        default="pending_onboarding",
         index=True,
     )
 
@@ -333,8 +333,8 @@ class CreditReport(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         index=True,
     )
-    bureau: Mapped[BureauName] = mapped_column(
-        Enum(BureauName, name="bureau_name_enum"),
+    bureau: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
         index=True,
     )
@@ -475,8 +475,8 @@ class Tradeline(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=True,
         index=True,
     )
-    bureau: Mapped[BureauName] = mapped_column(
-        Enum(BureauName, name="bureau_name_enum2"),
+    bureau: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
     )
 
@@ -505,10 +505,10 @@ class Tradeline(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     # Status
-    status: Mapped[TradelineStatus] = mapped_column(
-        Enum(TradelineStatus, name="tradeline_status_enum"),
+    status: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=TradelineStatus.CURRENT,
+        default="current",
         index=True,
     )
     payment_history: Mapped[Optional[Dict]] = mapped_column(
@@ -574,8 +574,8 @@ class Inquiry(UUIDPrimaryKeyMixin, Base):
         ForeignKey("credit_reports.id", ondelete="SET NULL"),
         nullable=True,
     )
-    bureau: Mapped[BureauName] = mapped_column(
-        Enum(BureauName, name="bureau_name_enum3"),
+    bureau: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
     )
     inquirer_name: Mapped[str] = mapped_column(String(255), nullable=False)

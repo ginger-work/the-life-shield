@@ -12,7 +12,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -67,15 +67,15 @@ class EscalationEvent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         doc="Human staff member assigned to resolve",
     )
 
-    reason: Mapped[EscalationReason] = mapped_column(
-        Enum(EscalationReason, name="escalation_reason_enum"),
+    reason: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
         index=True,
     )
-    status: Mapped[EscalationStatus] = mapped_column(
-        Enum(EscalationStatus, name="escalation_status_enum"),
+    status: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=EscalationStatus.OPEN,
+        default="open",
         index=True,
     )
 

@@ -13,7 +13,7 @@ from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import (
-    Boolean, DateTime, Enum, ForeignKey, Index, Integer,
+    Boolean, DateTime, ForeignKey, Index, Integer,
     String, Text, UniqueConstraint, func,
 )
 from sqlalchemy.dialects.postgresql import INET, UUID
@@ -76,17 +76,17 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     # Identity
-    role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="user_role_enum"),
+    role: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=UserRole.CLIENT,
+        default="client",
         index=True,
         doc="Role determines what this user can access",
     )
-    status: Mapped[UserStatus] = mapped_column(
-        Enum(UserStatus, name="user_status_enum"),
+    status: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=UserStatus.PENDING_VERIFICATION,
+        default="pending_verification",
         index=True,
     )
 

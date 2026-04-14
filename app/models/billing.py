@@ -17,7 +17,7 @@ from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from sqlalchemy import (
-    Boolean, DateTime, Enum, ForeignKey, Index,
+    Boolean, DateTime, ForeignKey, Index,
     Integer, Numeric, String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import JSON, UUID
@@ -107,10 +107,10 @@ class Subscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         doc="basic, premium, vip",
     )
-    status: Mapped[SubscriptionStatus] = mapped_column(
-        Enum(SubscriptionStatus, name="subscription_status_enum"),
+    status: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=SubscriptionStatus.ACTIVE,
+        default="active",
         index=True,
     )
 
@@ -208,8 +208,8 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    category: Mapped[ProductCategory] = mapped_column(
-        Enum(ProductCategory, name="product_category_enum"),
+    category: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
         index=True,
     )
@@ -401,10 +401,10 @@ class Purchase(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         default="USD",
     )
-    status: Mapped[PurchaseStatus] = mapped_column(
-        Enum(PurchaseStatus, name="purchase_status_enum"),
+    status: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=PurchaseStatus.PENDING,
+        default="pending",
         index=True,
     )
     purchased_at: Mapped[Optional[datetime]] = mapped_column(
@@ -466,16 +466,16 @@ class Payment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         default="USD",
     )
-    status: Mapped[PaymentStatus] = mapped_column(
-        Enum(PaymentStatus, name="payment_status_enum"),
+    status: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=PaymentStatus.PENDING,
+        default="pending",
         index=True,
     )
-    processor: Mapped[PaymentProcessor] = mapped_column(
-        Enum(PaymentProcessor, name="payment_processor_enum"),
+    processor: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=PaymentProcessor.STRIPE,
+        default="stripe",
     )
     description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     payment_type: Mapped[str] = mapped_column(
@@ -549,8 +549,8 @@ class PricingRule(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
         doc="FK to the entity being priced (product_id, etc.)",
     )
-    rule_type: Mapped[PricingRuleType] = mapped_column(
-        Enum(PricingRuleType, name="pricing_rule_type_enum"),
+    rule_type: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
     )
     value: Mapped[Numeric] = mapped_column(

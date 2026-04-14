@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -58,14 +58,14 @@ class Appointment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=True,
     )
 
-    appointment_type: Mapped[AppointmentType] = mapped_column(
-        Enum(AppointmentType, name="appointment_type_enum"),
+    appointment_type: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
     )
-    status: Mapped[AppointmentStatus] = mapped_column(
-        Enum(AppointmentStatus, name="appointment_status_enum"),
+    status: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=AppointmentStatus.SCHEDULED,
+        default="scheduled",
         index=True,
     )
 

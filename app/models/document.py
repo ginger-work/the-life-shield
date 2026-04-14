@@ -12,7 +12,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sqlalchemy.dialects.postgresql import UUID
@@ -54,8 +54,8 @@ class Document(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         doc="Admin or system user who created/uploaded this document",
     )
 
-    document_type: Mapped[DocumentType] = mapped_column(
-        Enum(DocumentType, name="document_type_enum"),
+    document_type: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
         index=True,
     )

@@ -13,7 +13,7 @@ from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from sqlalchemy import (
-    Boolean, DateTime, Enum, ForeignKey, Index,
+    Boolean, DateTime, ForeignKey, Index,
     Integer, String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import JSON, UUID
@@ -111,20 +111,20 @@ class CommunicationLog(UUIDPrimaryKeyMixin, Base):
     )
 
     # Communication Details
-    channel: Mapped[CommunicationChannel] = mapped_column(
-        Enum(CommunicationChannel, name="comm_channel_enum"),
+    channel: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
         index=True,
     )
-    direction: Mapped[CommunicationDirection] = mapped_column(
-        Enum(CommunicationDirection, name="comm_direction_enum"),
+    direction: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
         index=True,
     )
-    status: Mapped[CommunicationStatus] = mapped_column(
-        Enum(CommunicationStatus, name="comm_status_enum"),
+    status: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
-        default=CommunicationStatus.SENT,
+        default="sent",
         index=True,
     )
 
@@ -268,8 +268,8 @@ class ConsentLog(UUIDPrimaryKeyMixin, Base):
         nullable=False,
         index=True,
     )
-    consent_type: Mapped[ConsentType] = mapped_column(
-        Enum(ConsentType, name="consent_type_enum"),
+    consent_type: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
         index=True,
     )
@@ -354,8 +354,8 @@ class DisclosureLog(UUIDPrimaryKeyMixin, Base):
         nullable=False,
         index=True,
     )
-    disclosure_type: Mapped[DisclosureType] = mapped_column(
-        Enum(DisclosureType, name="disclosure_type_enum"),
+    disclosure_type: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
         index=True,
     )
