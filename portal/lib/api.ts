@@ -3,7 +3,8 @@
  * Typed wrapper around all backend endpoints.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+// Use local proxy to avoid CORS issues with Railway CDN
+const API_BASE = "/api/proxy";
 
 type FetchOptions = RequestInit & { token?: string };
 
@@ -27,7 +28,7 @@ async function fetchAPI<T>(
     }
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`${API_BASE}?path=${encodeURIComponent(path)}`, {
     ...fetchOptions,
     headers,
   });
