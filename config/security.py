@@ -87,11 +87,11 @@ class SecuritySettings(BaseSettings):
     RATE_LIMIT_DEFAULT: str = "100/minute"
 
     # CORS
-    ALLOWED_ORIGINS: list[str] = [
-        "https://thelifeshield.com",
-        "https://app.thelifeshield.com",
-        "https://admin.thelifeshield.com",
-    ]
+    ALLOWED_ORIGINS: str = "https://thelifeshield.net,https://the-life-shield.vercel.app"
+
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        return [o.strip() for o in self.ALLOWED_ORIGINS.split(',') if o.strip()]
     ALLOW_CREDENTIALS: bool = True
 
     # App
