@@ -2,34 +2,38 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
-type ResponseData = any;
-
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ResponseData>
+  res: NextApiResponse
 ) {
   const { path } = req.query;
-  const pathStr = Array.isArray(path) ? path.join('/') : typeof path === 'string' ? path : '';
+  const pathStr = typeof path === 'string' ? path : '';
+  
+  if (!pathStr) {
+    return res.status(400).json({ error: 'No path provided' });
+  }
   
   try {
-    const response = await fetch(`${API_URL}/${pathStr}`, {
-      method: req.method,
+    const fetchOptions: RequestInit = {
+      method: req.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
-        ...req.headers,
       },
-      body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined,
-    });
+    };
     
+    if (req.body && (req.method === 'POST' || req.method === 'PUT')) {
+      fetchOptions.body = JSON.stringify(req.body);
+    }
+    
+    const response = await fetch(`${API_URL}/${pathStr}`, fetchOptions);
     const data = await response.json();
     
-    // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
-    res.status(response.status).json(data);
+    return res.status(response.status).json(data);
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Proxy error' });
+    return res.status(500).json({ error: error.message || 'Proxy error' });
   }
 }
