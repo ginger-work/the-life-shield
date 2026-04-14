@@ -10,13 +10,13 @@ RUN apt-get update && apt-get install -y \
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir psycopg2-binary==2.9.9
-
-# Copy application code
-COPY . .
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Expose port
 EXPOSE 8000
 
-# Start command
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Copy application code
+COPY . .
+
+# Start command - shell form so $PORT expands
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}

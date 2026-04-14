@@ -30,7 +30,7 @@ RUN pip install --upgrade pip wheel setuptools
 # Copy requirements and install dependencies
 WORKDIR /build
 COPY requirements*.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir psycopg2-binary==2.9.9
 
 
 # ------------------------------------
