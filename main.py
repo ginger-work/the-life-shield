@@ -70,7 +70,8 @@ limiter = Limiter(key_func=get_remote_address, default_limits=[settings.RATE_LIM
 async def lifespan(app: FastAPI):
     """Startup + shutdown events."""
     log.info("Starting The Life Shield API", version="1.0.0", env="debug" if settings.DEBUG else "production")
-    init_db()  # Create tables on startup
+    # TODO: Use Alembic migrations instead of init_db()
+    # init_db()  # Temporarily disabled — causes pg8000 hang
     yield
     log.info("Shutting down The Life Shield API")
 
