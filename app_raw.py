@@ -15,7 +15,9 @@ def app(environ, start_response):
     path = environ['PATH_INFO']
     method = environ['REQUEST_METHOD']
     
-    # Handle CORS preflight
+    print(f"[{method}] {path}", flush=True)  # Debug logging
+    
+    # Handle CORS preflight for ANY path
     if method == 'OPTIONS':
         start_response('200 OK', [('Content-Type', 'application/json')] + CORS_HEADERS)
         return [b'{}']
@@ -24,7 +26,7 @@ def app(environ, start_response):
         start_response('200 OK', [('Content-Type', 'application/json')] + CORS_HEADERS)
         return [json.dumps({"status": "healthy", "service": "The Life Shield", "version": "1.0.0"}).encode()]
     
-    elif path == '/api/v1/auth/register' and method == 'POST':
+    elif '/api/v1/auth/register' in path and method == 'POST':
         try:
             content_len = int(environ.get('CONTENT_LENGTH', 0))
             body = environ['wsgi.input'].read(content_len).decode('utf-8')
