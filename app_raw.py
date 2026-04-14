@@ -5,12 +5,23 @@ import json
 
 users = {}
 
+CORS_HEADERS = [
+    ('Access-Control-Allow-Origin', '*'),
+    ('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'),
+    ('Access-Control-Allow-Headers', 'Content-Type, Authorization'),
+]
+
 def app(environ, start_response):
     path = environ['PATH_INFO']
     method = environ['REQUEST_METHOD']
     
+    # Handle CORS preflight
+    if method == 'OPTIONS':
+        start_response('200 OK', [('Content-Type', 'application/json')] + CORS_HEADERS)
+        return [b'{}']
+    
     if path == '/health' and method == 'GET':
-        start_response('200 OK', [('Content-Type', 'application/json')])
+        start_response('200 OK', [('Content-Type', 'application/json')] + CORS_HEADERS)
         return [json.dumps({"status": "healthy", "service": "The Life Shield", "version": "1.0.0"}).encode()]
     
     elif path == '/api/v1/auth/register' and method == 'POST':
@@ -25,7 +36,7 @@ def app(environ, start_response):
             last_name = data.get('last_name')
             
             if email in users:
-                start_response('400 Bad Request', [('Content-Type', 'application/json')])
+                start_response('400 Bad Request', [('Content-Type', 'application/json')] + CORS_HEADERS)
                 return [json.dumps({"error": "User exists"}).encode()]
             
             users[email] = {
@@ -36,7 +47,7 @@ def app(environ, start_response):
                 "password": password,
             }
             
-            start_response('200 OK', [('Content-Type', 'application/json')])
+            start_response('200 OK', [('Content-Type', 'application/json')] + CORS_HEADERS)
             return [json.dumps({
                 "success": True,
                 "user": {
@@ -49,11 +60,11 @@ def app(environ, start_response):
                 "token_type": "bearer"
             }).encode()]
         except Exception as e:
-            start_response('500 Internal Server Error', [('Content-Type', 'application/json')])
+            start_response('500 Internal Server Error', [('Content-Type', 'application/json')] + CORS_HEADERS)
             return [json.dumps({"error": str(e)}).encode()]
     
     else:
-        start_response('404 Not Found', [('Content-Type', 'application/json')])
+        start_response('404 Not Found', [('Content-Type', 'application/json')] + CORS_HEADERS)
         return [json.dumps({"error": "Not found"}).encode()]
 
 if __name__ == '__main__':
