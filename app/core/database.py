@@ -42,7 +42,17 @@ def _build_engine_kwargs() -> dict:
     return kwargs
 
 
-engine = create_engine(settings.DATABASE_URL, **_build_engine_kwargs())
+# Force pg8000 (pure Python driver, no compilation needed) or psycopg2
+def _get_db_url() -> str:
+    url = settings.DATABASE_URL
+    # Replace postgresql:// or postgres:// with pg8000 driver
+    if url.startswith('postgresql://'):
+        return url.replace('postgresql://', 'postgresql+pg8000://', 1)
+    if url.startswith('postgres://'):
+        return url.replace('postgres://', 'postgresql+pg8000://', 1)
+    return url
+
+engine = create_engine(_get_db_url(), **_build_engine_kwargs())
 
 
 # ---------------------------------------------------------------------------
