@@ -70,8 +70,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=[settings.RATE_LIM
 async def lifespan(app: FastAPI):
     """Startup + shutdown events."""
     log.info("Starting The Life Shield API", version="1.0.0", env="debug" if settings.DEBUG else "production")
-    if settings.DEBUG:
-        init_db()  # Create tables on startup (use Alembic in production)
+    init_db()  # Create tables on startup
     yield
     log.info("Shutting down The Life Shield API")
 
