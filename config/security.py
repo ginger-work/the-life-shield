@@ -9,6 +9,7 @@ from datetime import timedelta
 from enum import Enum
 from typing import Optional
 
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
@@ -87,11 +88,17 @@ class SecuritySettings(BaseSettings):
     RATE_LIMIT_DEFAULT: str = "100/minute"
 
     # CORS
-    ALLOWED_ORIGINS: str = "https://thelifeshield.net,https://the-life-shield.vercel.app"
+    ALLOWED_ORIGINS: str = Field(
+        default="https://thelifeshield.net,https://the-life-shield.vercel.app",
+        description="Comma-separated CORS origins",
+    )
 
     @property
     def allowed_origins_list(self) -> list[str]:
-        return [o.strip() for o in self.ALLOWED_ORIGINS.split(',') if o.strip()]
+        """Parse comma-separated origins."""
+        if isinstance(self.ALLOWED_ORIGINS, list):
+            return self.ALLOWED_ORIGINS
+        return [o.strip() for o in str(self.ALLOWED_ORIGINS).split(',') if o.strip()]
     ALLOW_CREDENTIALS: bool = True
 
     # App
@@ -124,7 +131,19 @@ class SecuritySettings(BaseSettings):
         case_sensitive = True
 
 
-settings = SecuritySettings()
+try:
+    settings = SecuritySettings()
+except Exception as e:
+    print(f"WARNING: SecuritySettings failed to load: {e}")
+    # Create a minimal fallback settings object
+    class _FallbackSettings:
+        DEBUG = False
+        RATE_LIMIT_DEFAULT = "100/minute"
+        ALLOWED_ORIGINS = "https://the-life-shield.vercel.app"
+        @property
+        def allowed_origins_list(self):
+            return self.ALLOWED_ORIGINS.split(',')
+    settings = _FallbackSettings()
 
 
 # ─────────────────────────────────────────────
