@@ -83,7 +83,7 @@ export default function AppointmentsPage() {
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Upcoming</h2>
             {upcoming.length === 0 && (
               <div className="bg-white rounded-xl p-8 text-center border border-gray-100 shadow-sm">
-                <p className="text-3xl mb-2">📅</p>
+                <p className="text-gray-300 text-sm mb-2">No upcoming appointments</p>
                 <p className="text-gray-500">No upcoming appointments</p>
                 <button onClick={() => setShowBooking(true)} className="text-[#c4922a] text-sm mt-2 hover:underline">
                   Book one now →
@@ -95,7 +95,9 @@ export default function AppointmentsPage() {
               return (
                 <div key={apt.id} className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm flex items-center justify-between mb-3">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-[#1a2744] rounded-xl flex items-center justify-center text-2xl">📅</div>
+                    <div className="w-14 h-14 bg-[#1a2744] rounded-xl flex items-center justify-center">
+                      <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </div>
                     <div>
                       <p className="font-semibold text-[#1a2744]">{session?.label || apt.type}</p>
                       <p className="text-sm text-gray-500 mt-0.5">
@@ -131,7 +133,9 @@ export default function AppointmentsPage() {
                 return (
                   <div key={apt.id} className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm opacity-75 mb-3">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-xl">📋</div>
+                      <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                      </div>
                       <div>
                         <p className="font-medium text-gray-600">{session?.label || apt.type}</p>
                         <p className="text-sm text-gray-400 mt-0.5">

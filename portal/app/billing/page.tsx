@@ -193,7 +193,7 @@ export default function BillingPage() {
                 <div className="mt-4 grid grid-cols-2 gap-1">
                   {sub.features.map((f) => (
                     <div key={f} className="flex items-center gap-2 text-sm text-gray-300">
-                      <span className="text-[#c4922a]">✓</span>
+                      <svg className="w-4 h-4 text-[#c4922a] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
                       <span>{f}</span>
                     </div>
                   ))}
@@ -249,7 +249,7 @@ export default function BillingPage() {
                       <ul className="mt-3 space-y-1">
                         {plan.features.map((f) => (
                           <li key={f} className="text-xs text-gray-600 flex gap-1.5">
-                            <span className="text-[#0d7a6e]">✓</span>{f}
+                            <svg className="w-3 h-3 text-[#0d7a6e] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>{f}
                           </li>
                         ))}
                       </ul>

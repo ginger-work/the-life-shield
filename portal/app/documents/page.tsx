@@ -13,12 +13,12 @@ const MOCK_DOCS: Document[] = [
   { id: "d3", name: "Dispute_Evidence_CapOne.pdf", category: "dispute_evidence", status: "pending", uploaded_at: new Date().toISOString() },
 ];
 
-const CATEGORY_ICONS: Record<string, string> = {
-  identity: "🪪",
-  credit_report: "📊",
-  dispute_evidence: "📋",
-  signed_agreement: "✍️",
-  general: "📄",
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  identity: <svg className="w-6 h-6 text-[#1a2744]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c0 1.306.84 2.417 2 2.83" /></svg>,
+  credit_report: <svg className="w-6 h-6 text-[#1a2744]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
+  dispute_evidence: <svg className="w-6 h-6 text-[#1a2744]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>,
+  signed_agreement: <svg className="w-6 h-6 text-[#1a2744]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>,
+  general: <svg className="w-6 h-6 text-[#1a2744]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
 };
 
 export default function DocumentsPage() {
@@ -94,7 +94,11 @@ export default function DocumentsPage() {
               }
             }}
           >
-            <div className="text-4xl mb-2">{uploading ? "⏳" : "📁"}</div>
+            <div className="mb-2 flex justify-center">{uploading ? (
+              <svg className="w-10 h-10 text-gray-400 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            ) : (
+              <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+            )}</div>
             <p className="text-[#1a2744] font-semibold">{uploading ? "Uploading..." : "Drop files here or click to upload"}</p>
             <p className="text-gray-400 text-sm mt-1">PDF, JPG, PNG up to 10MB</p>
             <input
@@ -127,13 +131,13 @@ export default function DocumentsPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             {filtered.length === 0 && (
               <div className="p-12 text-center text-gray-400">
-                <p className="text-3xl mb-2">📁</p>
+                <div className="flex justify-center mb-2"><svg className="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg></div>
                 <p>No documents found</p>
               </div>
             )}
             {filtered.map((doc) => (
               <div key={doc.id} className="flex items-center gap-4 p-4 border-b border-gray-50 last:border-0 hover:bg-gray-50">
-                <div className="text-2xl">{CATEGORY_ICONS[doc.category] || "📄"}</div>
+                <div className="flex items-center justify-center w-8 h-8">{CATEGORY_ICONS[doc.category] || <svg className="w-6 h-6 text-[#1a2744]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>}</div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-[#1a2744] truncate">{doc.name}</p>
                   <div className="flex gap-3 mt-0.5 text-xs text-gray-400">
@@ -147,21 +151,21 @@ export default function DocumentsPage() {
                       ? "bg-green-100 text-green-700"
                       : "bg-yellow-100 text-yellow-700"
                   }`}>
-                    {doc.status === "verified" ? "✓ Verified" : "⧗ Pending"}
+                    {doc.status === "verified" ? "Verified" : "Pending"}
                   </span>
                   <button
                     onClick={() => window.open(`/documents/preview/${doc.id}`, "_blank")}
                     className="text-gray-400 hover:text-[#1a2744] p-1"
                     title="Preview"
                   >
-                    👁️
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                   </button>
                   <button
                     onClick={() => setDeleteId(doc.id)}
                     className="text-gray-400 hover:text-red-500 p-1"
                     title="Delete"
                   >
-                    🗑️
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>
               </div>
