@@ -2,24 +2,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y gcc libpq-dev && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir pg8000==1.31.2
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
 COPY . .
 
-# Make startup script executable
-RUN chmod +x start.sh
-
-# Expose port
 EXPOSE 8000
 
-# Use shell script for proper env var expansion
-ENTRYPOINT ["sh", "start.sh"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
