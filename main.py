@@ -24,7 +24,11 @@ from app.core.database import engine, Base
 
 def init_db():
     """Create all tables (sync version for startup)."""
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+        log.info("Database tables initialized successfully")
+    except Exception as e:
+        log.warning(f"Database initialization failed (may already exist): {e}")
 
 # ─────────────────────────────────────────────
 # STRUCTURED LOGGING SETUP
@@ -70,8 +74,10 @@ limiter = Limiter(key_func=get_remote_address, default_limits=[settings.RATE_LIM
 async def lifespan(app: FastAPI):
     """Startup + shutdown events."""
     log.info("Starting The Life Shield API", version="1.0.0", env="debug" if settings.DEBUG else "production")
-    # TODO: Use Alembic migrations instead of init_db()
-    # init_db()  # Temporarily disabled — causes pg8000 hang
+    try:
+        init_db()
+    except Exception as e:
+        log.error(f"Startup error: {e}")
     yield
     log.info("Shutting down The Life Shield API")
 
