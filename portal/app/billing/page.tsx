@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { api, Subscription, SubscriptionPlan, Payment } from "@/lib/api";
+import { StripePaymentForm } from "@/components/billing/StripePaymentForm";
 
 const MOCK_SUBSCRIPTION: Subscription = {
   id: "sub_1",
@@ -45,6 +46,8 @@ export default function BillingPage() {
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState<SubscriptionPlan | null>(null);
 
   useEffect(() => {
     loadData();
@@ -90,6 +93,16 @@ export default function BillingPage() {
     setTimeout(() => setToast(null), 3500);
   }
 
+  function handleUpgradeClick(plan: SubscriptionPlan) {
+    // Free plan doesn't need payment
+    if (plan.price_monthly === 0) {
+      handleUpgrade(plan.id);
+      return;
+    }
+    setPendingPlan(plan);
+    setShowPaymentForm(true);
+  }
+
   async function handleUpgrade(planId: string) {
     setUpgrading(planId);
     try {
@@ -101,6 +114,14 @@ export default function BillingPage() {
       showToast(msg, "error");
     } finally {
       setUpgrading(null);
+    }
+  }
+
+  async function handlePaymentSuccess() {
+    setShowPaymentForm(false);
+    if (pendingPlan) {
+      await handleUpgrade(pendingPlan.id);
+      setPendingPlan(null);
     }
   }
 
@@ -192,7 +213,7 @@ export default function BillingPage() {
                   className="flex-1 bg-white border border-[#c4922a] text-[#c4922a] py-2.5 rounded-lg font-medium hover:bg-[#c4922a]/5 text-sm"
                   onClick={() => {
                     const nextPlan = plans.find(p => p.price_monthly > sub.price_monthly);
-                    if (nextPlan) handleUpgrade(nextPlan.id);
+                    if (nextPlan) handleUpgradeClick(nextPlan);
                   }}
                 >
                   Upgrade Plan
@@ -234,7 +255,7 @@ export default function BillingPage() {
                       </ul>
                       {plan.id !== sub.plan_id && (
                         <button
-                          onClick={() => handleUpgrade(plan.id)}
+                          onClick={() => handleUpgradeClick(plan)}
                           disabled={upgrading === plan.id}
                           className="mt-4 w-full bg-[#1a2744] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#2a3a5e] disabled:opacity-50"
                         >
@@ -310,6 +331,20 @@ export default function BillingPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Stripe Payment Form */}
+      {showPaymentForm && pendingPlan && (
+        <StripePaymentForm
+          planId={pendingPlan.id}
+          planName={pendingPlan.name}
+          priceMonthly={pendingPlan.price_monthly}
+          onSuccess={handlePaymentSuccess}
+          onCancel={() => {
+            setShowPaymentForm(false);
+            setPendingPlan(null);
+          }}
+        />
       )}
     </div>
   );

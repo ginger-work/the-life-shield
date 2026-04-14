@@ -355,6 +355,16 @@ async def register(body: RegisterRequest, db=Depends(get_db)):
     except Exception:
         pass  # Don't fail registration if email fails
 
+    # Trigger welcome email sequence (welcome + Tim Shaw intro)
+    try:
+        first_name = getattr(body, 'first_name', '') or body.email.split('@')[0]
+        from app.services.email_service import email_service
+        import asyncio
+        asyncio.create_task(email_service.send_welcome(body.email, first_name))
+        asyncio.create_task(email_service.send_tim_welcome(body.email, first_name))
+    except Exception as e:
+        log.warning("welcome_email_skipped", error=str(e))  # Never fail registration over email
+
     log.info("user_registered", user_id=user_id_str, email=body.email)
 
     return TokenResponse(

@@ -569,6 +569,20 @@ def file_dispute(
             detail={"error": "BUREAU_ERROR", "message": str(exc)},
         )
 
+    # Trigger dispute filed email notification
+    try:
+        from app.models.user import User
+        user = db.query(User).filter(User.id == client.user_id).first()
+        if user:
+            from app.services.email_service import email_service
+            import asyncio
+            first_name = (client.full_name or user.email).split()[0]
+            asyncio.create_task(
+                email_service.send_dispute_filed(user.email, first_name, dispute.bureau)
+            )
+    except Exception as email_err:
+        pass  # Never fail dispute filing over email
+
     return DisputeFiledResponse(
         success=True,
         dispute_id=dispute.id,
