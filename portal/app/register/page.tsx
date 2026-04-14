@@ -26,12 +26,28 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
-    if (form.password !== form.confirm) {
-      setError("Passwords do not match");
+    if (!form.first_name.trim()) {
+      setError("First name is required");
       return;
     }
-    if (form.password.length < 12) {
-      setError("Password must be at least 12 characters");
+    if (!form.last_name.trim()) {
+      setError("Last name is required");
+      return;
+    }
+    if (!form.email.trim()) {
+      setError("Email is required");
+      return;
+    }
+    if (!form.password) {
+      setError("Password is required");
+      return;
+    }
+    if (form.password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    if (form.password !== form.confirm) {
+      setError("Passwords do not match");
       return;
     }
     if (!form.email_consent) {
@@ -72,7 +88,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
             )}
@@ -121,7 +137,7 @@ export default function RegisterPage() {
                 value={form.password}
                 onChange={(e) => update("password", e.target.value)}
                 required
-                placeholder="Min 12 characters"
+                placeholder="Min 8 characters"
                 className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#c4922a]"
               />
             </div>
