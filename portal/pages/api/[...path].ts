@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,7 +25,8 @@ export default async function handler(
       fetchOptions.body = JSON.stringify(req.body);
     }
     
-    const fullUrl = `${API_URL}/${pathStr}`;
+    const fullUrl = `${API_BASE}/${pathStr}`;
+    console.log(`Proxy: ${req.method} ${fullUrl}`);
     const response = await fetch(fullUrl, fetchOptions);
     const data = await response.json();
     
