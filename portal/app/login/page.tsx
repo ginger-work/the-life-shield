@@ -16,8 +16,20 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const response = await api.auth.login(email, password);
-      saveTokens(response);
+      // Use direct Vercel API endpoint to bypass Railway issues
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Invalid email or password");
+      }
+      
+      const data = await response.json();
+      saveTokens(data);
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Invalid email or password");
