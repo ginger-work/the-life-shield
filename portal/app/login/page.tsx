@@ -16,8 +16,8 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      // Use direct Vercel API endpoint to bypass Railway issues
-      const response = await fetch("/api/login", {
+      // Use Vercel API auth endpoint (in-memory for MVP)
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

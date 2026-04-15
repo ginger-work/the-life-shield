@@ -57,14 +57,25 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const response = await api.auth.register({
-        email: form.email,
-        password: form.password,
-        first_name: form.first_name,
-        last_name: form.last_name,
-        sms_consent: form.sms_consent,
-        email_consent: form.email_consent,
+      // Use Vercel API auth endpoint (in-memory for MVP)
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          first_name: form.first_name,
+          last_name: form.last_name,
+          email_consent: form.email_consent,
+        }),
       });
+      
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Registration failed");
+      }
+      
+      const data = await response.json();
       saveTokens(response);
       router.push("/dashboard");
     } catch (err: any) {

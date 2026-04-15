@@ -117,6 +117,14 @@ export interface DisputeCase {
   outcome?: string;
 }
 
+export interface CallRecord {
+  id: string;
+  type: "voice" | "video";
+  duration: number; // seconds
+  status: "completed" | "missed" | "failed";
+  timestamp: string;
+}
+
 export interface ChatMessage {
   id: string;
   direction: "inbound" | "outbound";
@@ -605,6 +613,29 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ reason, message }),
       }),
+  },
+
+  // ─── Calls (Voice & Video) ─────────────────────────────────────────────────────
+  calls: {
+    initiateCall: () =>
+      fetchAPI<{ success: boolean; call_id: string; status: string; message: string }>("/agents/call", {
+        method: "POST",
+        body: JSON.stringify({ type: "voice" }),
+      }),
+
+    initiateVideoCall: () =>
+      fetchAPI<{ success: boolean; call_id: string; status: string; message: string }>("/agents/video", {
+        method: "POST",
+        body: JSON.stringify({ type: "video" }),
+      }),
+
+    endCall: (callId: string) =>
+      fetchAPI<{ success: boolean; duration?: number; logged: boolean }>(`/agents/call/${callId}/end`, {
+        method: "POST",
+      }),
+
+    getCallHistory: () =>
+      fetchAPI<{ success: boolean; calls: CallRecord[] }>("/agents/calls/history"),
   },
 
   // ─── Dashboard & Profile (named aliases) ──────────────────────────────────────
