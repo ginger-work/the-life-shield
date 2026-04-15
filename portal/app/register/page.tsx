@@ -76,7 +76,7 @@ export default function RegisterPage() {
       }
       
       const data = await response.json();
-      saveTokens(response);
+      saveTokens(data);
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Registration failed. Please try again.");
