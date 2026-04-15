@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://tls-api-v2-production.up.railway.app/api/v1';
 
